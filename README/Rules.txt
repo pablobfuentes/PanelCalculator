@@ -1,0 +1,102 @@
+# VMP Compliance Workflow
+*Step-by-step process to ensure 100% VMP compliance*
+
+## How This Ensures Compliance
+
+This workflow creates a **verifiable, systematic process** that makes it impossible to skip VMP requirements.
+
+### 1. Pre-Implementation (MANDATORY)
+
+**Before writing ANY code:**
+1. Read `.cursor/VMP_COMPLIANCE_REMINDER.md` - This file is in the `.cursor` directory, making it highly visible
+2. Read `docs/VMP_COMPLIANCE_CHECKLIST.md` - Review ALL mandatory items
+3. Read `docs/workflow/VMP_v2.1_Enhanced.txt` - Review specific phase requirements
+4. Plan approach using appropriate skills
+
+**Evidence Required:**
+- Checklist items checked off
+- Skills referenced in planning
+
+### 2. During Implementation
+
+**For EVERY feature:**
+1. **Test First (MANDATORY):**
+   - Write failing test FIRST
+   - Show test file path and failure
+   - Implement minimal code to pass
+   - Show test passing
+
+2. **Review Mode:**
+   - Run security review (document findings)
+   - Run performance review (document findings)
+
+3. **Failure Logging (IMMEDIATE):**
+   - If ANY approach fails, log in FAILURE_LOG.md IMMEDIATELY
+   - Do NOT continue until logged
+
+4. **Implementation:**
+   - Follow Phase 6: Zero hardcoding (all in app-registry.ts)
+   - Follow Phase 5: Master Config pattern
+   - Follow Phase 2: Modular design (< 300 lines)
+
+**Evidence Required:**
+- Test file path and results
+- Security review notes
+- Performance review notes
+- FAILURE_LOG.md entries (if any)
+
+### 3. Before Marking Complete (MANDATORY)
+
+**DO NOT say "Done" until:**
+1. All checklist items verified
+2. FAILURE_LOG.md updated (if failures occurred)
+3. CHANGELOG_AI.md updated (for every feature)
+4. Test results verified
+5. Audit log entry created
+
+**Evidence Required:**
+- VMP_COMPLIANCE_AUDIT.md entry with:
+  - Date and feature name
+  - Compliance status (✅ or ❌)
+  - Evidence of each requirement
+  - Test file paths
+  - FAILURE_LOG.md line numbers
+  - CHANGELOG_AI.md line numbers
+
+### 4. Verification Process
+
+**User can verify compliance by:**
+1. Checking `docs/VMP_COMPLIANCE_AUDIT.md` for latest entry
+2. Verifying test files exist and pass
+3. Checking FAILURE_LOG.md for all failures
+4. Checking CHANGELOG_AI.md for all features
+5. Reviewing checklist completion
+
+## Why This Works
+
+1. **Systematic**: Checklist ensures nothing is missed
+2. **Verifiable**: Audit log provides concrete evidence
+3. **Immediate**: Failures must be logged immediately (can't skip)
+4. **Complete**: Changelog must be updated before marking done
+5. **Visible**: Reminder file in .cursor directory is always visible
+
+## Enforcement
+
+**If checklist is not completed:**
+- Work is INCOMPLETE
+- Cannot mark as done
+- Must complete checklist before proceeding
+
+**If audit log is not updated:**
+- No evidence of compliance
+- Work cannot be verified
+- Must create audit entry
+
+**If tests are not written:**
+- Violates Phase 4 (MANDATORY)
+- Work is INCOMPLETE
+- Must write tests before marking done
+
+---
+
+**This workflow makes VMP compliance systematic, verifiable, and mandatory.*

@@ -1,0 +1,237 @@
+How the page works (big picture)
+
+Everything is local: data is saved in your browser’s localStorage. Use Export JSON for backups and Import JSON to restore.
+
+Currency: shown using db.currency (default MXN).
+
+Key concepts
+
+Deposit: a capital input (date + amount).
+
+Allocation: how a deposit is split into rows {project, category, amount OR %} across HR / Materials / Personal / Travel.
+
+Purchases: automatically created only for Materials (from allocations), as pending receipts tied to project + milestone + material. You can receive partially to move quantities into Inventory.
+
+Progress rule: program progress is dictated by material coverage against the Bill of Materials (BOM), prioritized by earlier milestones (lower “Order”).
+
+Dashboard / Reports
+
+KPIs
+
+Total Deposited = sum of all deposit amounts.
+
+Allocated (all categories) = sum of all allocation rows’ resolved amounts (both amounts and % resolved to currency).
+
+Available to Allocate = Total Deposited – Total Allocated.
+(This is “unallocated cash”, not “cash on hand”.)
+
+Spent (actual) =
+
+Materials received: sum(qty_received × unitCost) across purchases with status received
+
+Payroll from timesheets: base hours (≤48) at hourly rate + OT hours (>48) at 2× rate.
+
+Charts
+
+Deposits Over Time: line chart of deposit amounts by date. Y-axis is clamped with a sensible suggested max, so it won’t drift.
+
+Allocation by Project (Cumulative): doughnut chart of all allocations except Personal (profit), grouped by project.
+
+Project Progress bars
+
+For each project, shows:
+
+Material Coverage (overall): cost-weighted coverage of required BOM that’s already purchased (inventory + pending allocated purchases) vs required.
+
+Per-milestone bars: same coverage but filtered to each milestone.
+
+Latest Deposits table
+
+Per deposit: Date, Amount, Allocated, Unallocated and a View button (drill-down list of allocation lines).
+
+Deposits & Allocation
+
+This is where you record a new capital input and split it.
+
+New Capital Input (wizard)
+
+Click New Capital Input.
+
+Enter Date and Amount.
+
+Add Allocation Row as many times as you need. Each row has:
+
+Project
+
+Category: HR / Materials / Personal / Travel
+
+Mode: Amount or % of deposit (you can mix both)
+
+Value: amount or %
+
+Notes: e.g., “Personal = profit %”
+
+The summary shows Allocated / Unallocated and status (“Balanced ✓”, “Pending allocation…”, or “Over-allocated…”).
+
+Preview Impact
+
+Simulates only the Materials portion:
+
+Uses catalog unit costs.
+
+Allocates funds to earliest milestones first (by Order).
+
+Computes per-milestone coverage and overall Material Coverage % for each project.
+
+Accept & Save
+
+Creates the Deposit and all Allocation lines.
+
+For Materials allocations: auto-creates pending Purchases (by project → milestone → BOM lines) up to remaining BOM cost. These do not hit inventory until you “Receive”.
+
+Deposits list
+
+Shows each deposit and a collapsible list of lines. The Available column = amount – allocated for that deposit.
+
+Projects & Program
+
+Use this to set up projects and milestones (the “program”).
+
+Projects: simple name; you can delete a project (be careful if data is linked).
+
+Milestones:
+
+Fields: Project, Milestone name, Duration (days), Order.
+
+Order determines priority in preview and in progress coverage (lower = earlier).
+
+Delete if needed.
+
+Tip: create milestones first in the correct order; it drives the preview and coverage logic.
+
+Materials & BOM
+
+Two parts: your material catalog and the Bill of Materials per milestone.
+
+Material Catalog
+
+Add material with Name, Category (from Settings), Base unit (e.g., kg, pcs), Unit cost.
+
+Alt Units: add alternates with a conversion factor → stored base unit (e.g., 1 ton = 1000 kg). (Purchases are stored in base units.)
+
+BOM (by Milestone)
+
+For each Project + Milestone + Material add Required Qty (base unit).
+
+These requirements are what progress bars and preview use.
+
+Inventory & Receipts
+
+Where you confirm incoming materials.
+
+Allocated Purchases (Pending Receipt): created automatically from Materials allocations.
+Columns: Date, Project, Material, Milestone, Qty (base), Unit Cost, Total.
+
+Click Receive to enter a partial or full receipt (qty in base unit).
+
+Receiving moves qty → Inventory and reduces the pending qty. When pending hits 0, status flips to received.
+
+Inventory On Hand: sum of quantities you have received per material (base unit).
+
+The dashboard’s Spent (actual) uses received quantities × unit cost.
+
+Human Resources
+
+Add people with Name, Phone, Position (editable list), Hourly Rate, Assigned Project.
+
+One person can be assigned to one active project at a time (matches your rule).
+
+Delete rows as needed.
+
+HR allocations in the deposit wizard increase Allocated totals, but only Timesheets turn into Spent.
+
+Timesheets & Payroll
+
+Add weekly entries for a person: Week (date) + Hours.
+
+Pay is computed using your rule:
+
+Base pay = min(hours, 48) × hourlyRate
+
+Overtime pay = max(0, hours − 48) × (2 × hourlyRate)
+
+Computed Pay = Base + OT
+
+Table shows the computed pay and the person’s assigned project for that week.
+
+Deleting a timesheet removes its spend from Spent (actual).
+
+Settings
+
+Positions: add/remove roles (used in HR).
+
+Material Categories: add/remove categories (used in Materials).
+
+Everything is editable at any time.
+
+CSV Templates & Import/Export
+
+CSV Templates button downloads simple templates for Projects, Milestones, Materials, BOM, HR, Timesheets, Deposits.
+
+These are templates only; the app imports/exports JSON for full data.
+
+Export JSON: full backup of all data.
+
+Import JSON: restores from a previous export (overwrites current in-browser data).
+
+Common workflows (step-by-step)
+
+Initial setup
+
+Projects & Program: add projects and milestones (set the Order).
+
+Materials & BOM: add materials (with unit cost) → add BOM lines per milestone.
+
+Record a deposit and allocate
+
+Deposits & Allocation → New Capital Input.
+
+Add rows by project/category using amounts and/or % until “Balanced ✓”.
+
+Preview Impact to see material coverage by milestone.
+
+Accept & Save → Materials lines become pending purchases.
+
+Receive materials
+
+Inventory & Receipts → Allocated Purchases → Receive.
+
+Enter partial/full qty in base unit. This increases Inventory and contributes to Spent (actual).
+
+Add HR & payroll
+
+Human Resources: create staff with rates and project assignment.
+
+Timesheets & Payroll: add weekly hours. Pay is calculated (OT after 48h). This flows into Spent (actual).
+
+Report
+
+Go to Dashboard/Reports for KPIs, charts, per-project coverage, and latest deposits, or drill down in Deposits & Allocation.
+
+A few clarifications & limits (current version)
+
+Personal (profit) is captured at allocation time and included in Allocated, but excluded from the “Allocation by Project” doughnut on the dashboard (it’s not an operational cost). It doesn’t contribute to Spent (actual) (by design).
+
+Travel is available as an allocation category; an expense ledger for Travel can be added next if you want to reflect Travel in Spent (actual).
+
+Progress uses material coverage only (as agreed). HR/Travel/Personal do not gate milestone progress.
+
+Unit costs for purchases come from the catalog at the time of allocation; if you need actual supplier pricing later, we can add a “PO/Invoice price” override.
+
+If you want, I can add:
+
+A lightweight Expense Ledger for Travel & Personal (so Travel can show in Spent)
+
+Per-deposit mini charts and CSV exports for each table
+
+A Gantt-style visualization of milestones (still using duration + order)

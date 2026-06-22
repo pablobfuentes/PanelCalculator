@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bucket Inventory Demo — Standalone (Dummy Data)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ---------- Base ---------- */
+    html, body { height:100%; background:#0b1220; color:#e5e7eb; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    a { color:#93c5fd; }
+
+    /* ---------- Utility components (no @apply; pure CSS so CDN works) ---------- */
+    .card { background: rgba(15,23,42,0.7); border:1px solid rgba(51,65,85,0.9); border-radius:16px; padding:16px; backdrop-filter: blur(6px); }
+    .btn { display:inline-flex; align-items:center; gap:.5rem; border:1px solid #334155; color:#e5e7eb; background:#0f172a; padding:8px 12px; border-radius:12px; font-weight:600; font-size:14px; box-shadow:0 1px 0 rgba(0,0,0,.2); cursor:pointer; }
+    .btn:hover { background:#1f2937; }
+    .btn-primary { background:#2563eb; border-color:#1d4ed8; }
+    .btn-primary:hover { background:#1d4ed8; }
+    .btn-ghost { border-color:transparent; background:transparent; }
+    .pill { display:inline-flex; align-items:center; border:1px solid rgba(148,163,184,.3); border-radius:999px; padding:2px 8px; font-size:11px; font-weight:500; }
+    .pill-blue { background:rgba(59,130,246,.1); color:#93c5fd; border-color:rgba(59,130,246,.3); }
+    .pill-green { background:rgba(34,197,94,.1); color:#86efac; border-color:rgba(34,197,94,.3); }
+    .pill-amber { background:rgba(245,158,11,.1); color:#fcd34d; border-color:rgba(245,158,11,.3); }
+    .pill-red { background:rgba(239,68,68,.1); color:#fca5a5; border-color:rgba(239,68,68,.3); }
+
+    /* ---------- Buckets ---------- */
+    .bucket { display:flex; flex-direction:column; border:1px solid rgba(255,255,255,0.25); border-radius:16px; }
+    .bucket.attn { border-color:#facc15; box-shadow: 0 0 0 4px rgba(250,204,21,0.75), 0 0 22px 6px rgba(250,204,21,0.35); animation: attnPulse 1.6s ease-in-out infinite; }
+    @keyframes attnPulse { 0%{ box-shadow:0 0 0 4px rgba(250,204,21,.8), 0 0 18px 4px rgba(250,204,21,.25);} 50%{ box-shadow:0 0 0 6px rgba(250,204,21,.9), 0 0 28px 10px rgba(250,204,21,.45);} 100%{ box-shadow:0 0 0 4px rgba(250,204,21,.8), 0 0 18px 4px rgba(250,204,21,.25);} }
+    .bucket-header { padding:12px 12px 8px; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; font-size:12px; min-height:38px; }
+    .bucket-box { position:relative; margin:0 12px 12px; border:1px solid rgba(255,255,255,0.25); border-radius:14px; background:rgba(2,6,23,0.6); height:18rem; overflow:hidden; display:grid; gap:8px; grid-auto-rows:min-content; align-content:start; }
+    .bucket-footer { display:flex; align-items:center; justify-content:space-between; color:#94a3b8; font-size:11px; padding:8px 12px 12px; min-height:36px; }
+
+    /* "Water" fills are child of .bucket-box so absolute is scoped correctly */
+    .water { position:absolute; left:0; right:0; bottom:0; pointer-events:none; }
+    .water-needed { background: rgba(59,130,246,0.5); }
+    .water-used { background: rgba(167,139,250,0.45); }
+
+    /* ---------- Packages ---------- */
+    .pkg { border:1px solid rgba(255,255,255,.35); background:rgba(15,23,42,.75); border-radius:12px; padding:10px; cursor:pointer; }
+    .pkg:hover { border-color:#94a3b8; background:#1f2937; }
+    .pkg-title { font-size:11px; font-weight:700; color:#e2e8f0; }
+    .pkg-meta { font-size:10px; color:#94a3b8; }
+    .pulse { animation: pulseGlow 1.6s ease-in-out infinite; }
+    @keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(56,189,248,.35); } 70% { box-shadow: 0 0 0 10px rgba(56,189,248,0); } 100% { box-shadow: 0 0 0 0 rgba(56,189,248,0); } }
+
+    /* ---------- Modal ---------- */
+    .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(2,6,23,.7); z-index:50; }
+    .modal.open { display:flex; }
+  </style>
+</head>
+<body>
+  <header class="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 grid place-items-center font-bold">BK</div>
+        <div>
+          <h1 class="text-lg font-semibold">Bucket Inventory Demo — Standalone</h1>
+          <p class="text-xs text-slate-400">Dummy data • not connected to your main app</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn" onclick="resetDemo()">Reset Demo</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 space-y-4">
+    <!-- Controls -->
+    <div class="card">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Project</label>
+          <select id="projectSel" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"></select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Legend</label>
+          <div class="flex flex-wrap gap-2 text-[11px] text-slate-300">
+            <span class="pill pill-blue">Funded</span>
+            <span class="pill pill-amber">Purchased</span>
+            <span class="pill pill-green">Received</span>
+            <span class="pill pill-red">Used</span>
+          </div>
+        </div>
+        <div class="md:col-span-2"></div>
+        <div class="flex items-end justify-end gap-2">
+          <button class="btn" onclick="openDepositModal()">New Deposit</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buckets Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div class="bucket" id="bkt-needed" onclick="openBucketDetails('needed')">
+        <div class="bucket-header">Needed (BOM remaining)</div>
+        <div class="bucket-box p-3 space-y-2" id="box-needed"></div>
+        <div class="bucket-footer"><span>Click for breakdown</span><span id="sum-needed"></span></div>
+      </div>
+      <div class="bucket" id="bkt-funded">
+        <div class="bucket-header">Funded (pending buying)</div>
+        <div class="bucket-box p-3 grid grid-cols-2 gap-2" id="box-funded"></div>
+        <div class="bucket-footer"><span id="count-funded"></span><span id="sum-funded"></span></div>
+      </div>
+      <div class="bucket" id="bkt-purchased">
+        <div class="bucket-header">Purchased (pending receipt)</div>
+        <div class="bucket-box p-3 grid grid-cols-2 gap-2" id="box-purchased"></div>
+        <div class="bucket-footer"><span id="count-purchased"></span><span id="sum-purchased"></span></div>
+      </div>
+      <div class="bucket" id="bkt-received">
+        <div class="bucket-header">Received (on hand)</div>
+        <div class="bucket-box p-3 grid grid-cols-2 gap-2" id="box-received"></div>
+        <div class="bucket-footer"><span id="count-received"></span><span id="sum-received"></span></div>
+      </div>
+      <div class="bucket" id="bkt-used" onclick="openBucketDetails('used')">
+        <div class="bucket-header">Used</div>
+        <div class="bucket-box p-3 grid grid-cols-1 gap-2 place-content-center text-center" id="box-used"></div>
+        <div class="bucket-footer"><span>Click for breakdown</span><span id="sum-used"></span></div>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div id="alerts" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+  </main>
+
+  <!-- Deposit Modal -->
+  <div class="modal" id="modal-deposit">
+    <div class="bg-slate-900/95 border border-slate-700 rounded-2xl p-4 w-[min(780px,96vw)] max-height-[90vh]" style="max-height:90vh; overflow-y:auto;">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-lg font-semibold">New Deposit → Funded Package</h3>
+        <button class="btn btn-ghost" onclick="closeDepositModal()">Close</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div>
+          <label class="text-xs text-slate-400">Date</label>
+          <input id="dep-date" type="date" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Project</label>
+          <select id="dep-project" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"></select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Mode</label>
+          <select id="dep-mode" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+            <option value="units">Assign by units</option>
+            <option value="money">Assign by money</option>
+            <option value="unassigned">Unassigned for now</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Currency</label>
+          <div class="text-sm text-slate-300">MXN</div>
+        </div>
+      </div>
+      <div class="mt-3 card">
+        <div class="text-xs text-slate-400 mb-2">Amount by material category (<span id="dep-mode-label">units</span>)</div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div><label class="text-xs text-slate-400">Metal</label><input id="dep-Metal" type="number" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm" placeholder="0" /></div>
+          <div><label class="text-xs text-slate-400">Consumable</label><input id="dep-Consumable" type="number" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm" placeholder="0" /></div>
+          <div><label class="text-xs text-slate-400">Tool</label><input id="dep-Tool" type="number" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm" placeholder="0" /></div>
+          <div><label class="text-xs text-slate-400">Gas</label><input id="dep-Gas" type="number" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm" placeholder="0" /></div>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-2">If Mode = Unassigned, values entered are treated as <b>money</b> and pooled in the package until you assign them.</p>
+        <p class="text-[11px] text-slate-400 mt-1">Category costs (demo): Metal $120, Consumable $80, Tool $1000, Gas $50 per unit.</p>
+      </div>
+      <div class="mt-3 flex gap-2">
+        <button class="btn btn-primary" onclick="createDeposit()">Accept Deposit</button>
+        <button class="btn" onclick="closeDepositModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Package / Breakdown Modal -->
+  <div class="modal" id="modal-pkg">
+    <div class="bg-slate-900/95 border border-slate-700 rounded-2xl p-4 w-[min(840px,96vw)]" style="max-height:90vh; overflow-y:auto;">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-lg font-semibold" id="pkg-title">Details</h3>
+        <button class="btn btn-ghost" onclick="closePkgModal()">Close</button>
+      </div>
+      <div id="pkg-content"></div>
+    </div>
+  </div>
+
+<script>
+// ====================== Demo Data & Helpers ======================
+const CATS = ['Metal','Consumable','Tool','Gas'];
+const CAT_COST = { Metal:120, Consumable:80, Tool:1000, Gas:50 }; // MXN per unit (demo)
+function zeroCats(){ return {Metal:0, Consumable:0, Tool:0, Gas:0}; }
+
+const demo = {
+  projects: [
+    {id:'p1', name:'Plant Expansion', unit:'units', needed: {Metal:5000, Consumable:80, Tool:30, Gas:1200}},
+    {id:'p2', name:'New Warehouse',   unit:'units', needed: {Metal:3000, Consumable:50, Tool:20, Gas:800}},
+  ],
+  pkgs: { }
+};
+
+function cloneDemo(){ return JSON.parse(JSON.stringify(demo)); }
+let DB = cloneDemo();
+
+function ensureProjectState(pid){ if(!DB.pkgs[pid]) DB.pkgs[pid] = { funded:[], purchased:[], received:[], used:[] }; }
+function uid(){ return Math.random().toString(36).slice(2); }
+function byId(id){ return document.getElementById(id); }
+function fmtNum(n){ return Number(n||0).toLocaleString(); }
+function fmtCur(n){ return new Intl.NumberFormat(undefined,{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(Number(n||0)); }
+
+function sumCats(o){ return CATS.reduce((a,c)=> a+Number(o[c]||0), 0); }
+function addCats(a,b){ const r=zeroCats(); CATS.forEach(c=> r[c]=(Number(a[c]||0)+Number(b[c]||0))); return r; }
+function subCats(a,b){ const r=zeroCats(); CATS.forEach(c=> r[c]=Math.max(0, Number(a[c]||0)-Number(b[c]||0))); return r; }
+function moneyOfCat(c, qty){ return (CAT_COST[c]||0) * Number(qty||0); }
+function moneyOfCats(o){ return CATS.reduce((sum,c)=> sum + moneyOfCat(c, o[c]||0), 0); }
+
+function getProject(pid){ return DB.projects.find(p=>p.id===pid); }
+
+// =============================== Rendering ===============================
+function renderControls(){
+  const sel = byId('projectSel');
+  sel.innerHTML = DB.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  if(!sel.value) sel.value = DB.projects[0].id;
+}
+
+function calcBuckets(pid){
+  const proj = getProject(pid); ensureProjectState(pid);
+  const s = DB.pkgs[pid];
+  const fundedAssigned = s.funded.reduce((acc,p)=> addCats(acc, p.assigned ? p.qtyByCat : zeroCats()), zeroCats());
+  const purchased = s.purchased.reduce((acc,p)=> addCats(acc, p.qtyByCat), zeroCats());
+  const received = s.received.reduce((acc,p)=> addCats(acc, p.qtyByCat), zeroCats());
+  const used = s.used.reduce((acc,p)=> addCats(acc, p.qtyByCat), zeroCats());
+
+  let needed = {...proj.needed};
+  needed = subCats(needed, fundedAssigned);
+  needed = subCats(needed, purchased);
+  needed = subCats(needed, received);
+  needed = subCats(needed, used);
+
+  return { needed, fundedAssigned, purchased, received, used };
+}
+
+function bucketAttn(pid){
+  const s = DB.pkgs[pid]; ensureProjectState(pid);
+  const hasUnassigned = s.funded.some(p=> (p.unassignedMoney||0) > 0);
+  const hasPendingReceipt = s.purchased.length>0; // anything to receive
+  return { needed:false, funded:hasUnassigned, purchased:hasPendingReceipt, received:false, used:false };
+}
+
+function renderBuckets(){
+  const pid = byId('projectSel').value; const proj = getProject(pid); ensureProjectState(pid);
+  const sums = calcBuckets(pid);
+  const attn = bucketAttn(pid);
+
+  const totalBOM = sumCats(proj.needed);
+  const neededSumUnits = sumCats(sums.needed);
+  const usedSumUnits = sumCats(sums.used);
+  const neededLevel = totalBOM? (neededSumUnits/totalBOM)*100 : 0; // water height for Needed
+  const usedLevel = totalBOM? (usedSumUnits/totalBOM)*100 : 0;       // water height for Used
+
+  // Needed (water tank)
+  byId('bkt-needed').classList.toggle('attn', attn.needed);
+  const bn = byId('box-needed');
+  const neededMoney = moneyOfCats(sums.needed);
+  bn.innerHTML = `
+    <div class='water water-needed' style='height:${neededLevel}%;'></div>
+    <div class='relative z-10 h-full grid place-items-center text-center p-3'>
+      <div>
+        <div class='text-xs text-slate-400'>Total Remaining</div>
+        <div class='text-2xl font-semibold'>${fmtCur(neededMoney)}</div>
+        <div class='text-[11px] text-slate-400 mt-1'>(click for breakdown)</div>
+      </div>
+    </div>`;
+  byId('sum-needed').textContent = `Total: ${fmtCur(neededMoney)}`;
+
+  // Package card (totals only in stage view)
+  function pkgHTML(stage, p){
+    const totalUnits = sumCats(p.qtyByCat||zeroCats());
+    const totalMoney = moneyOfCats(p.qtyByCat||zeroCats());
+    const title = stage==='funded' ? `Funded pkg` : stage==='purchased' ? `PO pkg` : stage==='received' ? `Stock pkg` : `Used pkg`;
+    const pulse = stage==='purchased' ? 'pulse' : '';
+    return `<div class="pkg ${pulse}" onclick="openPkg('${pid}','${stage}','${p.id}')">
+      <div class='pkg-title'>${title}</div>
+      <div class='pkg-meta'>${fmtCur(totalMoney)} <span class='text-slate-500'>( ${fmtNum(totalUnits)} units )</span></div>
+    </div>`;
+  }
+
+  // Funded / Purchased / Received
+  byId('box-funded').innerHTML = DB.pkgs[pid].funded.map(p=> pkgHTML('funded', p)).join('') || `<div class='text-slate-500 text-sm'>No packages yet.</div>`;
+  byId('box-purchased').innerHTML = DB.pkgs[pid].purchased.map(p=> pkgHTML('purchased', p)).join('') || `<div class='text-slate-500 text-sm'>No purchases.</div>`;
+  byId('box-received').innerHTML = DB.pkgs[pid].received.map(p=> pkgHTML('received', p)).join('') || `<div class='text-slate-500 text-sm'>No stock on hand.</div>`;
+
+  // Used (water rising)
+  const bu = byId('box-used');
+  const usedMoney = moneyOfCats(sums.used);
+  bu.innerHTML = `
+    <div class='water water-used' style='height:${usedLevel}%;'></div>
+    <div class='relative z-10 h-full grid place-items-center text-center p-3'>
+      <div>
+        <div class='text-xs text-slate-400'>Total Used</div>
+        <div class='text-2xl font-semibold'>${fmtCur(usedMoney)}</div>
+        <div class='text-[11px] text-slate-400 mt-1'>(click for breakdown)</div>
+      </div>
+    </div>`;
+
+  // Footers
+  byId('count-funded').textContent = `${DB.pkgs[pid].funded.length} package(s)`;
+  byId('count-purchased').textContent = `${DB.pkgs[pid].purchased.length} package(s)`;
+  byId('count-received').textContent = `${DB.pkgs[pid].received.length} package(s)`;
+  byId('count-used').textContent = `${DB.pkgs[pid].used.length} package(s)`;
+  byId('sum-funded').textContent = `Total: ${fmtCur(moneyOfCats(sums.fundedAssigned))}`;
+  byId('sum-purchased').textContent = `Total: ${fmtCur(moneyOfCats(sums.purchased))}`;
+  byId('sum-received').textContent = `Total: ${fmtCur(moneyOfCats(sums.received))}`;
+  byId('sum-used').textContent = `Total: ${fmtCur(usedMoney)}`;
+
+  // Attention glow only when truly pending actions
+  byId('bkt-funded').classList.toggle('attn', attn.funded);
+  byId('bkt-purchased').classList.toggle('attn', attn.purchased);
+  byId('bkt-received').classList.toggle('attn', attn.received);
+  byId('bkt-used').classList.toggle('attn', attn.used);
+
+  renderAlerts(pid);
+}
+
+function renderAlerts(pid){
+  const wrap = byId('alerts'); wrap.innerHTML='';
+  const s = DB.pkgs[pid]; ensureProjectState(pid);
+  const hasUnassigned = s.funded.some(p=> (p.unassignedMoney||0) > 0);
+  const hasPendingReceipt = s.purchased.length>0;
+  function tile(text){ return `<div class='card text-sm'>${text}</div>`; }
+  if(hasUnassigned) wrap.insertAdjacentHTML('beforeend', tile('⚠️ <b>Funded</b> contains <b>unassigned</b> money. Click a package to distribute by category.'));
+  if(hasPendingReceipt) wrap.insertAdjacentHTML('beforeend', tile('📦 You have purchases <b>pending receipt</b>. Click a purchase package to receive.'));
+  if(!hasUnassigned && !hasPendingReceipt) wrap.insertAdjacentHTML('beforeend', tile('All clear ✅'));
+}
+
+// ============================== Deposit Flow ==============================
+function openDepositModal(){
+  const pid = byId('projectSel').value; const sel = byId('dep-project');
+  sel.innerHTML = DB.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); sel.value = pid;
+  byId('dep-date').value = new Date().toISOString().slice(0,10);
+  byId('dep-mode').value = 'units';
+  byId('dep-mode-label').textContent = 'units';
+  ['dep-Metal','dep-Consumable','dep-Tool','dep-Gas'].forEach(id=> byId(id).value='');
+  byId('modal-deposit').classList.add('open');
+}
+function closeDepositModal(){ byId('modal-deposit').classList.remove('open'); }
+byId('dep-mode')?.addEventListener('change', (e)=>{ byId('dep-mode-label').textContent = e.target.value==='money' ? 'money (MXN)' : 'units'; });
+
+function createDeposit(){
+  const pid = byId('dep-project').value; ensureProjectState(pid);
+  const date = byId('dep-date').value;
+  const mode = byId('dep-mode').value; // 'units' | 'money' | 'unassigned'
+  const vals = {}; CATS.forEach(c=> vals[c]=Number(byId('dep-'+c).value||0));
+  const s = DB.pkgs[pid];
+
+  // Merge into newest funded package if exists
+  let target = s.funded[s.funded.length-1];
+  if(!target){ target = { id: uid(), date, assigned:false, qtyByCat: zeroCats(), unassignedMoney:0, history: [] }; s.funded.push(target); }
+  target.history = target.history || [];
+
+  if(mode==='units'){
+    const addUnits = vals; const addMoney = moneyOfCats(addUnits);
+    target.qtyByCat = addCats(target.qtyByCat, addUnits); target.assigned = true;
+    target.history.push({ date, as:'units', qtyByCat:addUnits, money:addMoney });
+  } else if(mode==='money'){
+    const units = zeroCats(); CATS.forEach(c=> units[c] = (CAT_COST[c]>0? vals[c]/CAT_COST[c]:0));
+    const addMoney = Object.values(vals).reduce((a,b)=>a+Number(b||0),0);
+    target.qtyByCat = addCats(target.qtyByCat, units); target.assigned = true;
+    target.history.push({ date, as:'money', qtyByCat:units, money:addMoney });
+  } else {
+    const addMoney = Object.values(vals).reduce((a,b)=>a+Number(b||0),0);
+    target.unassignedMoney = Number(target.unassignedMoney||0) + addMoney;
+    target.history.push({ date, as:'unassigned', money:addMoney });
+  }
+
+  closeDepositModal();
+  renderBuckets();
+}
+
+// ============================== Package Modal / Assign / Purchase =============================
+let currentPkgRef = null; // {pid, stage, id}
+
+function openPkg(pid, stage, id){ currentPkgRef = {pid, stage, id}; renderPkgModal(); byId('modal-pkg').classList.add('open'); }
+function closePkgModal(){ byId('modal-pkg').classList.remove('open'); currentPkgRef = null; }
+
+function getPkg(ref){ const s = DB.pkgs[ref.pid][ref.stage]; return s.find(p=>p.id===ref.id); }
+function setPkg(ref, newPkg){ const list = DB.pkgs[ref.pid][ref.stage]; const idx = list.findIndex(p=>p.id===ref.id); list[idx]=newPkg; }
+function removePkg(ref){ const list = DB.pkgs[ref.pid][ref.stage]; const idx = list.findIndex(p=>p.id===ref.id); list.splice(idx,1); }
+
+function chipCatsMoney(o){
+  return `<div class="flex flex-wrap gap-1 mt-1">${CATS.map(c=> (o[c]>0? `<span class='pill ${c==='Metal'?'pill-blue':c==='Consumable'?'pill-amber':c==='Tool'?'pill-red':'pill-green'}'>${c[0]}: ${fmtCur(moneyOfCat(c,o[c]))}</span>`: '')).join('')}</div>`;
+}
+
+function renderPkgModal(){
+  const ref = currentPkgRef; const pkg = getPkg(ref); const proj = getProject(ref.pid);
+  const wrap = byId('pkg-content'); const title = byId('pkg-title');
+  if(ref.stage==='funded') title.textContent = 'Funded Package';
+  else if(ref.stage==='purchased') title.textContent = 'Purchased Package';
+  else if(ref.stage==='received') title.textContent = 'Received Package';
+  else if(ref.stage==='used') title.textContent = 'Used Package';
+  else title.textContent = 'Details';
+
+  const totalAssignedMoney = moneyOfCats(pkg.qtyByCat||zeroCats());
+  const totalUnassignedMoney = Number(pkg.unassignedMoney||0);
+
+  let body = `<div class='mb-2'><div class='text-sm text-slate-300'>${proj.name} • <span class='pill pill-blue'>${ref.stage.toUpperCase()}</span></div>
+              <div class='text-xl font-semibold'>Package ${pkg.id.slice(0,5)} — ${fmtCur(totalAssignedMoney + totalUnassignedMoney)}</div></div>`;
+
+  if(ref.stage==='funded'){
+    body += `<div class='grid grid-cols-1 md:grid-cols-2 gap-3'>
+      <div class='card'>
+        <div class='text-sm font-semibold mb-2'>Inside the package</div>
+        ${ pkg.assigned? chipCatsMoney(pkg.qtyByCat) : '' }
+        ${ (totalUnassignedMoney>0)? `<div class='mt-2 text-[11px] text-slate-400'>Unassigned: <b>${fmtCur(totalUnassignedMoney)}</b></div>` : '' }
+        ${(pkg.history&&pkg.history.length)? `<div class='mt-2 text-[11px] text-slate-400'>History: ${pkg.history.map(h=> `${h.date} (+${h.money?fmtCur(h.money):fmtCur(moneyOfCats(h.qtyByCat||zeroCats()))})`).join(' • ')}</div>`:''}
+      </div>
+      <div class='card'>
+        <div class='text-sm font-semibold mb-1'>Assign or Purchase</div>
+        <div class='text-[11px] text-slate-400 mb-2'>Assign unassigned <b>money</b> to categories (converted to units), or purchase from assigned amounts.</div>
+        ${ totalUnassignedMoney>0 ? assignFormHTML_Money(pkg) : '' }
+        ${ pkg.assigned && sumCats(pkg.qtyByCat)>0 ? purchaseFormHTML(pkg) : '' }
+        <div id='preview-box' class='mt-2 text-xs text-slate-300'></div>
+      </div>
+    </div>`;
+  }
+  else if(ref.stage==='purchased'){
+    body += `<div class='card'>${chipCatsMoney(pkg.qtyByCat)}</div>
+             <div class='mt-3 flex gap-2'><button class='btn btn-primary' onclick='receiveFromPurchase()'>Accept Receipt</button></div>`;
+  }
+  else if(ref.stage==='received'){
+    body += `<div class='card'>${chipCatsMoney(pkg.qtyByCat)}</div>
+             <div class='mt-3 flex gap-2'><button class='btn btn-primary' onclick='useFromStock()'>Accept Usage</button></div>`;
+  }
+  else { body += `<div class='card'>${chipCatsMoney(pkg.qtyByCat)}</div>`; }
+
+  wrap.innerHTML = body;
+}
+
+function assignFormHTML_Money(pkg){
+  return `<div class='space-y-2'>
+    <div class='grid grid-cols-2 md:grid-cols-4 gap-2'>
+      ${CATS.map(c=> `<div><label class='text-xs text-slate-400'>${c} (MXN)</label><input id='asM-${c}' type='number' class='w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm' placeholder='0' /></div>`).join('')}
+    </div>
+    <div class='flex flex-wrap gap-2'>
+      <button class='btn' onclick='previewAssignMoney()' type='button'>Preview assignment</button>
+      <button class='btn btn-primary' onclick='assignUnassignedMoney()' type='button'>Accept assignment</button>
+      <button class='btn' onclick='assignEqualMoney()' type='button'>Split equally (money)</button>
+    </div>
+    <div class='text-[11px] text-slate-400'>Unassigned available: <b>${fmtCur(pkg.unassignedMoney||0)}</b></div>
+  </div>`;
+}
+
+function previewAssignMoney(){
+  const ref=currentPkgRef; const pkg=getPkg(ref);
+  let sumMoney=0; const wantMoney={}; CATS.forEach(c=> { const v=Number(byId('asM-'+c)?.value||0); wantMoney[c]=v; sumMoney+=v; });
+  const units = zeroCats(); CATS.forEach(c=> units[c] = (CAT_COST[c]>0? wantMoney[c]/CAT_COST[c]:0));
+  byId('preview-box').innerHTML = sumMoney>0 ? `Will add ${Object.entries(units).filter(([,q])=>q>0).map(([c,q])=>`${fmtNum(q)} ${c}`).join(', ')} (${fmtCur(sumMoney)})` : '';
+}
+
+// Purchase from assigned (units)
+function purchaseFormHTML(pkg){
+  return `<div class='space-y-2 mt-3'>
+    <div class='grid grid-cols-2 md:grid-cols-4 gap-2'>
+      ${CATS.map(c=> `<div><label class='text-xs text-slate-400'>${c} (units)</label><input id='buy-${c}' type='number' class='w-full rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-sm' placeholder='0 (max ${fmtNum(pkg.qtyByCat[c]||0)})' /></div>`).join('')}
+    </div>
+    <div class='flex flex-wrap gap-2'>
+      <button class='btn' onclick='previewPurchase()' type='button'>Preview purchase</button>
+      <button class='btn btn-primary' onclick='purchaseAssigned()' type='button'>Accept purchase</button>
+      <button class='btn' onclick='buyAllAssigned()' type='button'>Buy All Assigned</button>
+    </div>
+  </div>`;
+}
+
+function previewPurchase(){
+  const ref=currentPkgRef; const pkg=getPkg(ref); const want=zeroCats(); CATS.forEach(c=> want[c]=Number(byId('buy-'+c)?.value||0));
+  const money = moneyOfCats(want); byId('preview-box').innerHTML = money>0 ? `Will move ${fmtCur(money)} to <b>Purchased</b>` : '';
+}
+
+function assignUnassignedMoney(){
+  const ref=currentPkgRef; const pkg=getPkg(ref);
+  let sumMoney = 0; const wantMoney={}; CATS.forEach(c=> { const v=Number(byId('asM-'+c).value||0); wantMoney[c]=v; sumMoney+=v; });
+  if(sumMoney<=0) return alert('Enter money amounts to assign.');
+  if(sumMoney > (pkg.unassignedMoney||0)) return alert('Not enough unassigned money.');
+  const units = zeroCats(); CATS.forEach(c=> units[c] = (CAT_COST[c]>0? wantMoney[c]/CAT_COST[c]:0));
+  pkg.qtyByCat = addCats(pkg.qtyByCat||zeroCats(), units); pkg.assigned = true; pkg.unassignedMoney = (pkg.unassignedMoney||0) - sumMoney; setPkg(ref,pkg); renderPkgModal(); renderBuckets();
+}
+function assignEqualMoney(){ const ref=currentPkgRef; const pkg=getPkg(ref); const each=(pkg.unassignedMoney||0)/CATS.length; CATS.forEach(c=> byId('asM-'+c) && (byId('asM-'+c).value = Math.floor(each))); }
+
+function purchaseAssigned(){
+  const ref=currentPkgRef; const pkg=getPkg(ref); const want=zeroCats(); CATS.forEach(c=> want[c]=Number(byId('buy-'+c).value||0));
+  for(const c of CATS){ if(want[c] > (pkg.qtyByCat[c]||0)) return alert('Too much '+c+' requested.'); }
+  if(sumCats(want)<=0) return alert('Enter amounts to purchase.');
+  pkg.qtyByCat = subCats(pkg.qtyByCat, want); setPkg(ref,pkg);
+  DB.pkgs[ref.pid].purchased.push({ id:uid(), date:new Date().toISOString().slice(0,10), assigned:true, qtyByCat:want, history:[] });
+  renderPkgModal(); renderBuckets();
+}
+function buyAllAssigned(){ const ref=currentPkgRef; const pkg=getPkg(ref); const want={...pkg.qtyByCat}; CATS.forEach(c=> byId('buy-'+c) && (byId('buy-'+c).value = want[c])); }
+
+// Purchased → Received
+function receiveFromPurchase(){ const ref=currentPkgRef; const pkg=getPkg(ref); removePkg(ref); DB.pkgs[ref.pid].received.push({ id:uid(), date:new Date().toISOString().slice(0,10), assigned:true, qtyByCat:{...pkg.qtyByCat}, history:[] }); closePkgModal(); renderBuckets(); }
+// Received → Used
+function useFromStock(){ const ref=currentPkgRef; const pkg=getPkg(ref); removePkg(ref); DB.pkgs[ref.pid].used.push({ id:uid(), date:new Date().toISOString().slice(0,10), assigned:true, qtyByCat:{...pkg.qtyByCat}, history:[] }); closePkgModal(); renderBuckets(); }
+
+// Needed / Used breakdown modal
+function openBucketDetails(stage){
+  const pid = byId('projectSel').value; const proj = getProject(pid); const sums = calcBuckets(pid);
+  byId('pkg-title').textContent = stage==='needed' ? 'Needed Breakdown' : 'Used Breakdown';
+  const data = stage==='needed' ? sums.needed : sums.used; const totalMoney = moneyOfCats(data);
+  const body = `<div class='mb-2'><div class='text-sm text-slate-300'>${proj.name} • <span class='pill ${stage==='needed'?'pill-blue':'pill-red'}'>${stage.toUpperCase()}</span></div>
+                <div class='text-xl font-semibold'>${fmtCur(totalMoney)}</div></div>
+                <div class='card'>${chipCatsMoney(data)}</div>`;
+  byId('pkg-content').innerHTML = body; byId('modal-pkg').classList.add('open');
+}
+
+// =============================== Init & Reset ===============================
+function resetDemo(){ if(confirm('Reset demo data?')){ DB = cloneDemo(); seedDemo(); renderAll(); } }
+function renderAll(){ renderControls(); renderBuckets(); }
+
+function seedDemo(){
+  const pid='p1'; ensureProjectState(pid);
+  DB.pkgs['p1'].funded.push({ id:uid(), date:'2025-09-01', assigned:true, qtyByCat:{Metal:1000, Consumable:10, Tool:0, Gas:100}, unassignedMoney:20000, history:[{date:'2025-09-01', as:'units', qtyByCat:{Metal:1000, Consumable:10, Tool:0, Gas:100}, money: moneyOfCats({Metal:1000,Consumable:10,Tool:0,Gas:100})}] });
+  DB.pkgs['p1'].purchased.push({ id:uid(), date:'2025-09-02', assigned:true, qtyByCat:{Metal:400}, history:[] });
+  DB.pkgs['p1'].received.push({ id:uid(), date:'2025-09-03', assigned:true, qtyByCat:{Metal:150}, history:[] });
+  DB.pkgs['p1'].used.push({ id:uid(), date:'2025-09-04', assigned:true, qtyByCat:{Metal:80}, history:[] });
+}
+
+seedDemo(); renderAll();
+</script>
+</body>
+</html>

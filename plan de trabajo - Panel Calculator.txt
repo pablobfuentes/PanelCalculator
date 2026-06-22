@@ -1,0 +1,125 @@
+Phase 1 - 
+Project scaffold
+Create project in VS Code with a clear folder structure: /core, /ui, /tests, /outputs
+
+Initialize Git repository and commit the folder scaffold as the first commit
+
+Create a .gitignore for Python (venv, __pycache__, .env)
+Dependencies
+
+Install numpy, pandas, plotly (not matplotlib — plotly works natively in Streamlit)library
+
+Install PyNite or anaStruct for FEA — test a single-beam example to confirm it workslibrary
+
+Install Streamlit and confirm hello-world app runs in browserlibrary
+
+Install openpyxl and reportlab for Excel and PDF exportlibrary
+
+Pin all versions in requirements.txt
+
+Phase 2 - 
+Data model
+Define a PanelSpec dataclass: length, width, weight, tilt_angle
+
+Define a LayoutConfig dataclass: mid_clamp_gap, alley_width, max_area_x, max_area_y
+Layout logic
+
+Build pair_panels() — returns a bounding box for 2 panels including the 1" mid-clamp gap
+
+Build accumulate_row() — spaces pairs with alley every 2 pairs (4 panels), returns list of (x, y, w, h) rectangles
+
+Build accumulate_grid() — repeats rows in Y direction with alley insertion
+
+Build fit_to_area() — reduces panel count step-by-step until grid fits within max_area_x × max_area_y
+Validation
+
+Write unit tests for each function above using pytestlibrary
+
+Generate a Plotly figure showing panel rectangles, alley gaps, and bounding box — confirm visually with a known layoutkey
+
+Phase 3 - 
+Tributary area model
+Build compute_tributary_zones(columns, grid_bbox) — assigns each column a rectangular catchment areaadded
+
+Calculate total tributary area per column and verify all zones sum to total panel area (no gaps or overlaps)key
+
+Store the tributary rectangle per column as an attribute — it will feed the FEA load processor in Phase 5
+Visual layer
+
+Overlay tributary zones on the Plotly canvas as semi-transparent filled rectangles
+
+Add hover tooltip per zone showing: column ID, tributary area (m²), estimated load (kN)added
+
+Color-code zones by load intensity (light green → amber → red as load increases)
+
+Phase 4 - 
+Streamlit layout
+Create app.py with a sidebar for inputs: panel dims, weight, max area, column spacing
+
+Add a wind load section: wind speed (km/h), exposure category (A–D per CFE NTC-Viento 2020)critical
+
+Main area shows the interactive Plotly canvas — grid + columns + tributary zones
+Column placement
+
+Build default_columns() — places columns at equal spacing aligned to truss span (default 3–4 m)
+
+Allow coordinate override: text input for custom column X,Y — updates canvas on Enter
+
+Add obstacle zone input: user enters bounding box coords — any column inside is flagged red and excluded from FEA
+Live BOM
+
+Compute and display the BOM live on every input change — no separate export step needed to see countsadded
+
+Show: panel count, column count, total PTR 4×4 length (m), truss chord length (m), base plates
+
+Show estimated steel tonnage alongside BOM for quick cost estimation
+
+Phase 5 - 
+Material & section properties
+
+Define a SteelSection dataclass: A (area), Ix (moment of inertia), Fy (yield strength)
+
+Enter PTR 4"×4" values from IMCA or AISC table — double-check units (mm⁴ not cm⁴)critical
+
+Enter secondary beam and Warren truss chord section values
+Load combination table
+
+Build a load_combinations() function that returns a table of factored combos per CFE (or ASCE 7 if preferred)key
+
+Display this table in the Streamlit UI so engineers can audit inputs before the solver runsadded
+
+Include at minimum: 1.2D + 1.6L, 0.9D + 1.6W, 1.2D + 1.0W + 1.0L
+FEA integration
+
+Map confirmed column positions as fixed or pinned nodes in PyNite/anaStruct
+
+Apply tributary area loads from Phase 3 onto beam elements
+
+Run the solver for each load combination and store results per combo
+
+Extract: max bending moment, max axial force, max deflection per element
+Code checks
+
+Check bending stress: fb = M/S ≤ 0.66Fy (or LRFD equivalent)key
+
+Check deflection: δmax ≤ L/240 (or project-specified limit)key
+
+Flag each element PASS (green) / WARN (amber, >80% utilization) / FAIL (red)
+
+Run Phase 0 reference case through solver — assert it matches your hand calc within ±2%critical
+
+Phase 6 - 
+Results dashboard
+
+Overlay PASS/WARN/FAIL color on each beam element in the Plotly canvas
+
+Add a results table below the canvas: element ID, max moment, utilization ratio, status
+
+Show governing load combination for each failed element
+Export
+
+Export to Excel: one sheet for BOM, one for load combinations, one for element resultslibrary
+
+Export to PDF: layout diagram + results summary + pass/fail table on a single pagelibrary
+
+Include a timestamp and input parameter summary on the cover page of both exports
