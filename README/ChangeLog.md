@@ -1,6 +1,69 @@
 # Change Log
 
-## [Unreleased] — Panel Calculator Phase 1.2 dependencies
+## [Unreleased] — Reach-based minimal alley layout
+
+### Rationale
+- Minimize alley count while keeping every panel within an adjustable 2–4 panel reach of a parallel alley. Add one perpendicular edge spine for maintenance access.
+
+### Changes
+- **`core/layout.py`** — Added `compute_alley_positions(num_cols, reach)`; parallel alleys are placed at the midpoint of each `2 * reach` panel group; one edge spine connects all parallel alleys.
+- **`core/models.py`** — Added `LayoutConfig.alley_reach` constrained to 2–4 panels.
+- **`core/visualization.py`**, **`app.py`** — Added adjustable alley reach and updated the Plotly bbox/legend for the new model.
+- **Tests** — Added coverage for reach=2 / 8 columns (`[1, 5]`), no trailing alley, reach coverage, and single-spine behavior.
+
+### Verification
+- `pytest tests/` — 34 passed.
+- App module import check passes.
+
+---
+
+
+### Rationale
+- Complete Phase 2 with full pytest coverage and a Plotly reference layout per PBS §2.3.
+
+### Changes
+- **`core/layout.py`** — Added `collect_row_alley_rects` and `collect_alley_rects` for service-gap geometry.
+- **`core/visualization.py`** — `build_layout_figure` and `save_layout_figure` (panels, alleys, layout bbox, max area).
+- **`tests/test_layout.py`** — Additional tests for `grid_bbox` and validation edge cases.
+- **`tests/test_visualization.py`** — Figure structure tests; writes `outputs/reference_layout.html`.
+- **`docs/Panel_Calculator_PBS.md`** — Phase 2 complete (tasks 2.3.1–2.3.2).
+
+### Verification
+- `pytest tests/test_layout.py tests/test_visualization.py` — 19 passed.
+- Open `outputs/reference_layout.html` in a browser to confirm visual layout (3 pairs × 2 rows).
+
+---
+
+
+### Rationale
+- Implement panel pairing, row/grid accumulation, and area fitting per PBS §2.2.
+
+### Changes
+- **`core/layout.py`** — `pair_panels`, `accumulate_row`, `accumulate_grid`, `fit_to_area`, `grid_bbox`, and `GridLayout` result type. Panels pair along +X; service alleys every 2 pairs (row) and every 2 rows (grid).
+- **`core/__init__.py`** — Re-exports layout API.
+- **`tests/test_layout.py`** — Unit tests for all layout functions.
+- **`docs/Panel_Calculator_PBS.md`** — Tasks 2.2.1–2.2.4 marked complete.
+
+### Verification
+- `pytest tests/test_layout.py` — 10 passed.
+
+---
+
+
+### Rationale
+- Define core panel and layout configuration types per PBS §2.1 before layout logic.
+
+### Changes
+- **`core/models.py`** — `PanelSpec` (length, width, weight, tilt_angle) and `LayoutConfig` (mid_clamp_gap, alley_width, max_area_x, max_area_y) with validation; default mid-clamp gap = 1 in (0.0254 m).
+- **`core/__init__.py`** — Re-exports `PanelSpec`, `LayoutConfig`.
+- **`tests/test_models.py`** — Unit tests for valid/invalid inputs and defaults.
+- **`docs/Panel_Calculator_PBS.md`** — Tasks 2.1.1–2.1.2 marked complete.
+
+### Verification
+- `pytest tests/test_models.py` — 7 passed.
+
+---
+
 
 ### Rationale
 - Install and pin runtime dependencies; verify FEA and Streamlit per PBS §1.2; publish project to GitHub.

@@ -2,7 +2,7 @@
 
 **Source:** `plan de trabajo - Panel Calculator.txt`  
 **Project:** Ferrose — Solar panel layout, tributary loads, FEA, and BOM calculator  
-**Status:** In progress — Phase 1 complete
+**Status:** In progress — Phase 2 complete
 
 ---
 
@@ -22,12 +22,12 @@
 | Phase | Name | Tasks | Done |
 |-------|------|-------|------|
 | 1 | Project scaffold | 9 | 9 / 9 |
-| 2 | Data model & layout | 9 | 0 / 9 |
+| 2 | Data model & layout | 9 | 9 / 9 |
 | 3 | Tributary area model | 6 | 0 / 6 |
 | 4 | Streamlit UI | 11 | 0 / 11 |
 | 5 | FEA & code checks | 14 | 0 / 14 |
 | 6 | Results & export | 7 | 0 / 7 |
-| **Total** | | **56** | **9 / 56** |
+| **Total** | | **56** | **18 / 56** |
 
 ---
 
@@ -56,20 +56,20 @@
 
 ### 2.1 Core dataclasses
 
-- [ ] **2.1.1** Define `PanelSpec` dataclass: `length`, `width`, `weight`, `tilt_angle`
-- [ ] **2.1.2** Define `LayoutConfig` dataclass: `mid_clamp_gap`, `alley_width`, `max_area_x`, `max_area_y`
+- [x] **2.1.1** Define `PanelSpec` dataclass: `length`, `width`, `weight`, `tilt_angle`
+- [x] **2.1.2** Define `LayoutConfig` dataclass: `mid_clamp_gap`, `alley_width`, `max_area_x`, `max_area_y`
 
 ### 2.2 Layout functions
 
-- [ ] **2.2.1** Build `pair_panels()` — returns bounding box for 2 panels including 1" mid-clamp gap
-- [ ] **2.2.2** Build `accumulate_row()` — spaces pairs with alley every 2 pairs (4 panels); returns list of `(x, y, w, h)` rectangles
-- [ ] **2.2.3** Build `accumulate_grid()` — repeats rows in Y direction with alley insertion
-- [ ] **2.2.4** Build `fit_to_area()` — reduces panel count step-by-step until grid fits within `max_area_x × max_area_y`
+- [x] **2.2.1** Build `pair_panels()` — returns bounding box for 2 panels including 1" mid-clamp gap
+- [x] **2.2.2** Build `accumulate_row()` — spaces pairs with alley every 2 pairs (4 panels); returns list of `(x, y, w, h)` rectangles
+- [x] **2.2.3** Build `accumulate_grid()` — repeats rows in Y direction with alley insertion
+- [x] **2.2.4** Build `fit_to_area()` — reduces panel count step-by-step until grid fits within `max_area_x × max_area_y`
 
 ### 2.3 Validation & visualization
 
-- [ ] **2.3.1** `[library]` Write unit tests for each layout function using `pytest`
-- [ ] **2.3.2** `[key]` Generate Plotly figure showing panel rectangles, alley gaps, and bounding box — confirm visually with a known layout
+- [x] **2.3.1** `[library]` Write unit tests for each layout function using `pytest`
+- [x] **2.3.2** `[key]` Generate Plotly figure showing panel rectangles, alley gaps, and bounding box — confirm visually with a known layout
 
 **Phase 2 exit criteria:** All layout functions tested; Plotly layout matches expected geometry for a reference case.
 
