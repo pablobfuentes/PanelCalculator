@@ -254,6 +254,73 @@ def _max_rows_for_height(panel: PanelSpec, config: LayoutConfig) -> int:
     return count
 
 
+def _panel_grid_factorizations(target_panels: int) -> list[tuple[int, int]]:
+    """
+    Return (num_pairs_per_row, num_rows) layouts for exactly target_panels.
+
+    Each row holds an even number of panels (paired columns).
+    """
+    if target_panels <= 0 or target_panels % 2 != 0:
+        return []
+
+    pair_rows = target_panels // 2
+    options: list[tuple[int, int]] = []
+    for num_pairs in range(1, pair_rows + 1):
+        if pair_rows % num_pairs != 0:
+            continue
+        num_rows = pair_rows // num_pairs
+        options.append((num_pairs, num_rows))
+    return options
+
+
+def fit_to_panel_count(
+    panel: PanelSpec,
+    config: LayoutConfig,
+    target_panels: int,
+) -> GridLayout:
+    """Pick a rectangular pair grid with exactly target_panels that fits max area."""
+    if target_panels <= 0:
+        return GridLayout(
+            rectangles=(),
+            num_pairs_per_row=0,
+            num_rows=0,
+            bbox=(0.0, 0.0, 0.0, 0.0),
+        )
+
+    best: tuple[int, int] | None = None
+    best_footprint = -1.0
+    for num_pairs, num_rows in _panel_grid_factorizations(target_panels):
+        bbox = layout_bbox(panel, config, num_pairs, num_rows)
+        if bbox[2] > config.max_area_x + 1e-9 or bbox[3] > config.max_area_y + 1e-9:
+            continue
+        footprint = bbox[2] * bbox[3]
+        if footprint > best_footprint + 1e-9 or (
+            abs(footprint - best_footprint) <= 1e-9
+            and best is not None
+            and num_pairs > best[0]
+        ):
+            best = (num_pairs, num_rows)
+            best_footprint = footprint
+
+    if best is None:
+        return GridLayout(
+            rectangles=(),
+            num_pairs_per_row=0,
+            num_rows=0,
+            bbox=(0.0, 0.0, 0.0, 0.0),
+        )
+
+    num_pairs, num_rows = best
+    rectangles = accumulate_grid(panel, config, num_pairs, num_rows)
+    bbox = layout_bbox(panel, config, num_pairs, num_rows)
+    return GridLayout(
+        rectangles=tuple(rectangles),
+        num_pairs_per_row=num_pairs,
+        num_rows=num_rows,
+        bbox=bbox,
+    )
+
+
 def fit_to_area(panel: PanelSpec, config: LayoutConfig) -> GridLayout:
     """Reduce row/pair counts until the grid fits within max_area_x × max_area_y."""
     max_pairs = _max_pairs_for_width(panel, config)

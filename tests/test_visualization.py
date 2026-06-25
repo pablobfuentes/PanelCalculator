@@ -56,6 +56,34 @@ def test_collect_alley_rects_two_rows_perimeter_and_column(
     ]
 
 
+def test_build_layout_figure_with_tributary_overlay(panel: PanelSpec, config: LayoutConfig):
+    from core.tributary import compute_tributary_zones, default_columns, enrich_tributary_loads, panel_field_bbox
+    from core.layout import accumulate_grid
+    from core.visualization import build_layout_figure
+
+    panels = accumulate_grid(panel, config, REFERENCE_PAIRS, REFERENCE_ROWS)
+    field = panel_field_bbox(panels)
+    columns = enrich_tributary_loads(
+        compute_tributary_zones(default_columns(field, spacing=3.5), panels),
+        panel,
+    )
+    fig = build_layout_figure(
+        panel, config, REFERENCE_PAIRS, REFERENCE_ROWS, tributary_columns=columns
+    )
+    tributary_traces = [t for t in fig.data if t.legendgroup == "tributary"]
+    column_traces = [t for t in fig.data if t.legendgroup == "columns"]
+    assert len(tributary_traces) == len(columns)
+    assert len(column_traces) == len(columns)
+    assert tributary_traces[0].hovertemplate is not None
+
+
+def test_load_intensity_color_endpoints():
+    from core.visualization import _load_intensity_color
+
+    assert "144" in _load_intensity_color(0.0)
+    assert "220" in _load_intensity_color(1.0)
+
+
 def test_build_layout_figure_reference_layout(panel: PanelSpec, config: LayoutConfig):
     fig = build_layout_figure(panel, config, REFERENCE_PAIRS, REFERENCE_ROWS)
     assert isinstance(fig, go.Figure)

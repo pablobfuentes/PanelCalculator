@@ -13,6 +13,7 @@ from core.layout import (
     grid_bbox,
 )
 from core.models import LayoutConfig, PanelSpec
+from core.tributary import Column
 
 PANEL_FILL = "rgba(46, 134, 193, 0.85)"
 PANEL_LINE = "#1a5276"
@@ -61,6 +62,94 @@ def _non_negative_axis_limits(
     return x_upper, y_upper
 
 
+def _load_intensity_color(t: float, *, alpha: float = 0.42) -> str:
+    """Map normalized load intensity to light green → amber → red."""
+    t = max(0.0, min(1.0, t))
+    if t <= 0.5:
+        blend = t / 0.5
+        red = int(144 + (255 - 144) * blend)
+        green = int(238 + (191 - 238) * blend)
+        blue = int(144 + (0 - 144) * blend)
+    else:
+        blend = (t - 0.5) / 0.5
+        red = int(255 + (220 - 255) * blend)
+        green = int(191 + (53 - 191) * blend)
+        blue = int(0 + (69 - 0) * blend)
+    return f"rgba({red},{green},{blue},{alpha})"
+
+
+def _add_tributary_zone(
+    fig: go.Figure,
+    column: Column,
+    *,
+    fillcolor: str,
+    showlegend: bool,
+) -> None:
+    if column.tributary_rect is None:
+        return
+    x, y, w, h = column.tributary_rect
+    fig.add_shape(
+        type="rect",
+        x0=x,
+        y0=y,
+        x1=x + w,
+        y1=y + h,
+        fillcolor=fillcolor,
+        line=dict(color="rgba(80, 80, 80, 0.6)", width=1, dash="dot"),
+        layer="below",
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[x + w / 2],
+            y=[y + h / 2],
+            mode="markers",
+            marker=dict(size=0.1, opacity=0),
+            name="Tributary zone",
+            legendgroup="tributary",
+            showlegend=showlegend,
+            customdata=[[column.column_id, column.tributary_area_m2, column.estimated_load_kn]],
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "Tributary area: %{customdata[1]:.2f} m²<br>"
+                "Estimated load: %{customdata[2]:.2f} kN"
+                "<extra></extra>"
+            ),
+        )
+    )
+
+
+def _apply_figure_axes(fig: go.Figure, x_max: float, y_max: float) -> None:
+    x_upper, y_upper = _non_negative_axis_limits(x_max, y_max)
+    fig.update_xaxes(
+        title_text="X (m)",
+        scaleanchor="y",
+        scaleratio=1,
+        range=[0, x_upper],
+        autorange=False,
+        constrain="domain",
+        zeroline=True,
+        showline=True,
+        linewidth=1,
+        linecolor="#333",
+    )
+    fig.update_yaxes(
+        title_text="Y (m)",
+        range=[0, y_upper],
+        autorange=False,
+        constrain="domain",
+        zeroline=True,
+        showline=True,
+        linewidth=1,
+        linecolor="#333",
+    )
+    fig.update_layout(
+        template="plotly_white",
+        width=FIGURE_WIDTH,
+        height=FIGURE_HEIGHT,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+    )
+
+
 def _add_rect(
     fig: go.Figure,
     rect: Rect,
@@ -105,8 +194,10 @@ def build_layout_figure(
     num_rows: int,
     *,
     show_max_area: bool = True,
+    tributary_columns: list[Column] | None = None,
+    title: str = "Panel layout",
 ) -> go.Figure:
-    """Build a Plotly figure with panels, alleys, and layout bounding box."""
+    """Build a Plotly figure with panels, alleys, optional tributary overlay, and bbox."""
     panels = accumulate_grid(panel, config, num_pairs_per_row, num_rows)
     alleys = collect_alley_rects(panel, config, num_pairs_per_row, num_rows)
     bbox = grid_bbox(panels + alleys)
@@ -144,6 +235,44 @@ def build_layout_figure(
             name="Edge spine" if is_spine else "Parallel alley",
         )
 
+    if tributary_columns:
+        loads = [column.estimated_load_kn for column in tributary_columns]
+        min_load = min(loads) if loads else 0.0
+        max_load = max(loads) if loads else 0.0
+        tributary_legend_shown = False
+        for column in tributary_columns:
+            if max_load > min_load:
+                intensity = (column.estimated_load_kn - min_load) / (max_load - min_load)
+            else:
+                intensity = 0.0
+            _add_tributary_zone(
+                fig,
+                column,
+                fillcolor=_load_intensity_color(intensity),
+                showlegend=not tributary_legend_shown,
+            )
+            tributary_legend_shown = True
+
+        column_legend_shown = False
+        for column in tributary_columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=[column.x],
+                    y=[column.y],
+                    mode="markers",
+                    marker=dict(symbol="triangle-up", size=10, color="#2c3e50"),
+                    name="Column",
+                    legendgroup="columns",
+                    showlegend=not column_legend_shown,
+                    hovertemplate=(
+                        f"<b>{column.column_id}</b><br>"
+                        f"X: {column.x:.2f} m"
+                        "<extra></extra>"
+                    ),
+                )
+            )
+            column_legend_shown = True
+
     bx, by, bw, bh = bbox
     if bw > 0 and bh > 0:
         _add_rect(
@@ -177,37 +306,8 @@ def build_layout_figure(
         x_max = bx + bw
         y_max = by + bh
 
-    x_upper, y_upper = _non_negative_axis_limits(x_max, y_max)
-
-    fig.update_xaxes(
-        title_text="X (m)",
-        scaleanchor="y",
-        scaleratio=1,
-        range=[0, x_upper],
-        autorange=False,
-        constrain="domain",
-        zeroline=True,
-        showline=True,
-        linewidth=1,
-        linecolor="#333",
-    )
-    fig.update_yaxes(
-        title_text="Y (m)",
-        range=[0, y_upper],
-        autorange=False,
-        constrain="domain",
-        zeroline=True,
-        showline=True,
-        linewidth=1,
-        linecolor="#333",
-    )
-    fig.update_layout(
-        title="Panel layout",
-        template="plotly_white",
-        width=FIGURE_WIDTH,
-        height=FIGURE_HEIGHT,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
-    )
+    _apply_figure_axes(fig, x_max, y_max)
+    fig.update_layout(title=title)
     return fig
 
 

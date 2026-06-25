@@ -2,7 +2,7 @@
 
 **Source:** `plan de trabajo - Panel Calculator.txt`  
 **Project:** Ferrose — Solar panel layout, tributary loads, FEA, and BOM calculator  
-**Status:** In progress — Phase 2 complete
+**Status:** In progress — Phase 3 complete
 
 ---
 
@@ -23,11 +23,11 @@
 |-------|------|-------|------|
 | 1 | Project scaffold | 9 | 9 / 9 |
 | 2 | Data model & layout | 9 | 9 / 9 |
-| 3 | Tributary area model | 6 | 0 / 6 |
+| 3 | Tributary area model | 6 | 6 / 6 |
 | 4 | Streamlit UI | 11 | 0 / 11 |
 | 5 | FEA & code checks | 14 | 0 / 14 |
 | 6 | Results & export | 7 | 0 / 7 |
-| **Total** | | **56** | **18 / 56** |
+| **Total** | | **56** | **24 / 56** |
 
 ---
 
@@ -79,15 +79,15 @@
 
 ### 3.1 Tributary computation
 
-- [ ] **3.1.1** `[added]` Build `compute_tributary_zones(columns, grid_bbox)` — assigns each column a rectangular catchment area
-- [ ] **3.1.2** `[key]` Calculate total tributary area per column and verify all zones sum to total panel area (no gaps or overlaps)
-- [ ] **3.1.3** Store tributary rectangle per column as an attribute — feeds FEA load processor in Phase 5
+- [x] **3.1.1** `[added]` Build `compute_tributary_zones(columns, grid_bbox)` — assigns each column a rectangular catchment area
+- [x] **3.1.2** `[key]` Calculate total tributary area per column and verify all zones sum to total panel area (no gaps or overlaps)
+- [x] **3.1.3** Store tributary rectangle per column as an attribute — feeds FEA load processor in Phase 5
 
 ### 3.2 Visual layer
 
-- [ ] **3.2.1** Overlay tributary zones on Plotly canvas as semi-transparent filled rectangles
-- [ ] **3.2.2** `[added]` Add hover tooltip per zone: column ID, tributary area (m²), estimated load (kN)
-- [ ] **3.2.3** Color-code zones by load intensity (light green → amber → red as load increases)
+- [x] **3.2.1** Overlay tributary zones on Plotly canvas as semi-transparent filled rectangles
+- [x] **3.2.2** `[added]` Add hover tooltip per zone: column ID, tributary area (m²), estimated load (kN)
+- [x] **3.2.3** Color-code zones by load intensity (light green → amber → red as load increases)
 
 **Phase 3 exit criteria:** Tributary zones partition panel area exactly; visual overlay and tooltips work on reference layout.
 

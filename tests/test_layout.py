@@ -10,6 +10,7 @@ from core.layout import (
     collect_alley_rects,
     parallel_alley_gap_labels,
     fit_to_area,
+    fit_to_panel_count,
     grid_bbox,
     layout_bbox,
     pair_panels,
@@ -97,6 +98,38 @@ def test_fit_to_area_too_small_returns_empty(panel: PanelSpec):
     result = fit_to_area(panel, config)
     assert result.num_pairs_per_row == 0
     assert result.num_rows == 0
+    assert result.rectangles == ()
+
+
+def test_panel_grid_factorizations_twelve_panels():
+    from core.layout import _panel_grid_factorizations
+
+    assert _panel_grid_factorizations(12) == [(1, 6), (2, 3), (3, 2), (6, 1)]
+
+
+def test_fit_to_panel_count_twelve_panels_in_default_area(panel: PanelSpec):
+    config = LayoutConfig(
+        mid_clamp_gap=0.1,
+        alley_width=1.0,
+        max_area_x=12.0,
+        max_area_y=8.0,
+    )
+    result = fit_to_panel_count(panel, config, 12)
+    assert len(result.rectangles) == 12
+    assert result.num_pairs_per_row * 2 * result.num_rows == 12
+    assert result.bbox[2] <= config.max_area_x
+    assert result.bbox[3] <= config.max_area_y
+
+
+def test_fit_to_panel_count_odd_count_returns_empty(panel: PanelSpec, config: LayoutConfig):
+    result = fit_to_panel_count(panel, config, 11)
+    assert result.num_pairs_per_row == 0
+    assert result.rectangles == ()
+
+
+def test_fit_to_panel_count_too_large_returns_empty(panel: PanelSpec):
+    config = LayoutConfig(max_area_x=5.0, max_area_y=5.0)
+    result = fit_to_panel_count(panel, config, 24)
     assert result.rectangles == ()
 
 
