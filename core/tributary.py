@@ -2,30 +2,42 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 
-from core.layout import Rect, grid_bbox
+from core.columns import (
+    Column,
+    DEFAULT_COLUMN_SPACING_M,
+    active_columns,
+    apply_obstacle_exclusions,
+    default_columns,
+    even_axis_positions,
+    panel_field_bbox,
+    parse_column_overrides,
+    parse_obstacle_zones,
+    resolve_columns,
+)
+from core.layout import Rect
 from core.models import PanelSpec
 
-DEFAULT_COLUMN_SPACING_M = 3.5
 GRAVITY_M_S2 = 9.80665
 
-
-@dataclass(frozen=True)
-class Column:
-    """Structural column position and tributary catchment."""
-
-    column_id: str
-    x: float
-    y: float = 0.0
-    tributary_rect: Rect | None = None
-    tributary_area_m2: float = 0.0
-    estimated_load_kn: float = 0.0
-
-
-def panel_field_bbox(panel_rects: list[Rect]) -> Rect:
-    """Axis-aligned bounds of the panel rectangles (excludes alleys)."""
-    return grid_bbox(panel_rects)
+__all__ = [
+    "Column",
+    "DEFAULT_COLUMN_SPACING_M",
+    "active_columns",
+    "apply_obstacle_exclusions",
+    "compute_tributary_zones",
+    "default_columns",
+    "enrich_tributary_loads",
+    "estimated_dead_load_kn",
+    "even_axis_positions",
+    "panel_field_bbox",
+    "parse_column_overrides",
+    "parse_obstacle_zones",
+    "resolve_columns",
+    "total_panel_area",
+    "tributary_partition_valid",
+]
 
 
 def total_panel_area(panel_rects: list[Rect]) -> float:
@@ -52,7 +64,9 @@ def enrich_tributary_loads(columns: list[Column], panel: PanelSpec) -> list[Colu
     return [
         replace(
             column,
-            estimated_load_kn=estimated_dead_load_kn(column.tributary_area_m2, panel),
+            estimated_load_kn=0.0
+            if column.excluded
+            else estimated_dead_load_kn(column.tributary_area_m2, panel),
         )
         for column in columns
     ]
@@ -70,27 +84,20 @@ def _intersection_area(a: Rect, b: Rect) -> float:
     return (x1 - x0) * (y1 - y0)
 
 
-def default_columns(panel_field: Rect, spacing: float = DEFAULT_COLUMN_SPACING_M) -> list[Column]:
-    """Place columns along X at equal spacing within the panel field width."""
-    if spacing <= 0:
-        raise ValueError("spacing must be positive")
+def _cell_boundaries(coords: list[float], start: float, end: float) -> list[tuple[float, float]]:
+    bounds: list[tuple[float, float]] = []
+    for index, coord in enumerate(coords):
+        left = start if index == 0 else (coords[index - 1] + coord) / 2.0
+        right = end if index == len(coords) - 1 else (coord + coords[index + 1]) / 2.0
+        bounds.append((left, right))
+    return bounds
 
-    _, _, width, _ = panel_field
-    if width <= 0:
-        return []
 
-    positions: list[float] = []
-    x = 0.0
-    while x < width - 1e-9:
-        positions.append(x)
-        x += spacing
-    if not positions or abs(positions[-1] - width) > 1e-6:
-        positions.append(width)
-
-    return [
-        Column(column_id=f"C{index}", x=position, y=0.0)
-        for index, position in enumerate(positions, start=1)
-    ]
+def _coord_index(value: float, coords: list[float]) -> int:
+    for index, coord in enumerate(coords):
+        if abs(coord - value) <= 1e-6:
+            return index
+    raise ValueError(f"Column coordinate {value} not found in grid axes {coords}")
 
 
 def compute_tributary_zones(
@@ -98,10 +105,10 @@ def compute_tributary_zones(
     panel_rects: list[Rect],
 ) -> list[Column]:
     """
-    Assign each column a rectangular tributary strip across the panel field.
+    Assign each active column a rectangular tributary cell over the panel field.
 
-    Strips are bounded by midpoints between adjacent column X positions and
-    clipped to the panel field. Tributary area counts only panel rectangle overlap.
+    Cells are bounded by midplanes between adjacent column lines in X and Y.
+    Excluded columns receive zero area.
     """
     if not columns:
         return []
@@ -113,32 +120,47 @@ def compute_tributary_zones(
 
     field = panel_field_bbox(panel_rects)
     fx, fy, fw, fh = field
-    sorted_columns = sorted(columns, key=lambda column: column.x)
+    active = active_columns(columns)
+    if not active:
+        return [
+            replace(column, tributary_rect=None, tributary_area_m2=0.0)
+            for column in columns
+        ]
 
-    boundaries = [fx]
-    for left, right in zip(sorted_columns, sorted_columns[1:]):
-        boundaries.append((left.x + right.x) / 2.0)
-    boundaries.append(fx + fw)
+    unique_x = sorted({column.x for column in active})
+    unique_y = sorted({column.y for column in active})
+    x_bounds = _cell_boundaries(unique_x, fx, fx + fw)
+    y_bounds = _cell_boundaries(unique_y, fy, fy + fh)
 
-    zoned: list[Column] = []
-    for index, column in enumerate(sorted_columns):
-        x0 = boundaries[index]
-        x1 = boundaries[index + 1]
-        strip: Rect = (x0, fy, x1 - x0, fh)
-        area = sum(_intersection_area(strip, panel_rect) for panel_rect in panel_rects)
-        zoned.append(
-            replace(
-                column,
-                tributary_rect=strip,
-                tributary_area_m2=area,
-            )
+    zoned_by_id: dict[str, Column] = {}
+    for column in active:
+        xi = _coord_index(column.x, unique_x)
+        yi = _coord_index(column.y, unique_y)
+        x0, x1 = x_bounds[xi]
+        y0, y1 = y_bounds[yi]
+        cell: Rect = (x0, y0, x1 - x0, y1 - y0)
+        area = sum(_intersection_area(cell, panel_rect) for panel_rect in panel_rects)
+        zoned_by_id[column.column_id] = replace(
+            column,
+            tributary_rect=cell,
+            tributary_area_m2=area,
         )
-    return zoned
+
+    return [
+        replace(
+            column,
+            tributary_rect=None,
+            tributary_area_m2=0.0,
+        )
+        if column.excluded
+        else zoned_by_id[column.column_id]
+        for column in columns
+    ]
 
 
 def tributary_partition_valid(columns: list[Column], panel_rects: list[Rect]) -> bool:
-    """True when tributary areas sum to total panel area (no gaps or double-count)."""
+    """True when active tributary areas sum to total panel area."""
     if not panel_rects:
         return all(column.tributary_area_m2 == 0.0 for column in columns)
-    assigned = sum(column.tributary_area_m2 for column in columns)
+    assigned = sum(column.tributary_area_m2 for column in active_columns(columns))
     return abs(assigned - total_panel_area(panel_rects)) <= 1e-6

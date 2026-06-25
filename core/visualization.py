@@ -23,6 +23,10 @@ SPINE_FILL = "rgba(192, 57, 43, 0.45)"
 SPINE_LINE = "#922b21"
 BBOX_LINE = "#27ae60"
 MAX_AREA_LINE = "rgba(127, 140, 141, 0.8)"
+OBSTACLE_FILL = "rgba(231, 76, 60, 0.25)"
+OBSTACLE_LINE = "#c0392b"
+COLUMN_ACTIVE_COLOR = "#2c3e50"
+COLUMN_EXCLUDED_COLOR = "#e74c3c"
 AXIS_PADDING_M = 0.25
 FIGURE_WIDTH = 900
 FIGURE_HEIGHT = 700
@@ -195,6 +199,7 @@ def build_layout_figure(
     *,
     show_max_area: bool = True,
     tributary_columns: list[Column] | None = None,
+    obstacle_zones: list[Rect] | None = None,
     title: str = "Panel layout",
 ) -> go.Figure:
     """Build a Plotly figure with panels, alleys, optional tributary overlay, and bbox."""
@@ -236,11 +241,17 @@ def build_layout_figure(
         )
 
     if tributary_columns:
-        loads = [column.estimated_load_kn for column in tributary_columns]
+        loads = [
+            column.estimated_load_kn
+            for column in tributary_columns
+            if not column.excluded and column.tributary_area_m2 > 0
+        ]
         min_load = min(loads) if loads else 0.0
         max_load = max(loads) if loads else 0.0
         tributary_legend_shown = False
         for column in tributary_columns:
+            if column.excluded or column.tributary_rect is None:
+                continue
             if max_load > min_load:
                 intensity = (column.estimated_load_kn - min_load) / (max_load - min_load)
             else:
@@ -253,25 +264,56 @@ def build_layout_figure(
             )
             tributary_legend_shown = True
 
-        column_legend_shown = False
+        active_legend_shown = False
+        excluded_legend_shown = False
         for column in tributary_columns:
+            is_excluded = column.excluded
             fig.add_trace(
                 go.Scatter(
                     x=[column.x],
                     y=[column.y],
                     mode="markers",
-                    marker=dict(symbol="triangle-up", size=10, color="#2c3e50"),
-                    name="Column",
-                    legendgroup="columns",
-                    showlegend=not column_legend_shown,
+                    marker=dict(
+                        symbol="triangle-up",
+                        size=10,
+                        color=COLUMN_EXCLUDED_COLOR if is_excluded else COLUMN_ACTIVE_COLOR,
+                    ),
+                    name="Excluded column" if is_excluded else "Column",
+                    legendgroup="columns_excluded" if is_excluded else "columns_active",
+                    showlegend=(
+                        (not excluded_legend_shown)
+                        if is_excluded
+                        else (not active_legend_shown)
+                    ),
                     hovertemplate=(
-                        f"<b>{column.column_id}</b><br>"
-                        f"X: {column.x:.2f} m"
+                        f"<b>{column.column_id}</b>"
+                        f"{' (excluded)' if is_excluded else ''}<br>"
+                        f"X: {column.x:.2f} m<br>"
+                        f"Y: {column.y:.2f} m"
                         "<extra></extra>"
                     ),
                 )
             )
-            column_legend_shown = True
+            if is_excluded:
+                excluded_legend_shown = True
+            else:
+                active_legend_shown = True
+
+    if obstacle_zones:
+        obstacle_legend_shown = False
+        for index, rect in enumerate(obstacle_zones):
+            _add_rect(
+                fig,
+                rect,
+                fillcolor=OBSTACLE_FILL,
+                line_color=OBSTACLE_LINE,
+                line_width=2,
+                line_dash="dash",
+                legend_group="obstacles",
+                showlegend=not obstacle_legend_shown,
+                name="Obstacle zone",
+            )
+            obstacle_legend_shown = True
 
     bx, by, bw, bh = bbox
     if bw > 0 and bh > 0:

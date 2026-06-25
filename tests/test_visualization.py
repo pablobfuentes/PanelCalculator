@@ -57,23 +57,31 @@ def test_collect_alley_rects_two_rows_perimeter_and_column(
 
 
 def test_build_layout_figure_with_tributary_overlay(panel: PanelSpec, config: LayoutConfig):
-    from core.tributary import compute_tributary_zones, default_columns, enrich_tributary_loads, panel_field_bbox
+    from core.columns import count_from_spacing, default_columns
+    from core.tributary import compute_tributary_zones, enrich_tributary_loads, panel_field_bbox
     from core.layout import accumulate_grid
     from core.visualization import build_layout_figure
 
     panels = accumulate_grid(panel, config, REFERENCE_PAIRS, REFERENCE_ROWS)
     field = panel_field_bbox(panels)
     columns = enrich_tributary_loads(
-        compute_tributary_zones(default_columns(field, spacing=3.5), panels),
+        compute_tributary_zones(
+            default_columns(
+                field,
+                count_x=count_from_spacing(field[2], 3.5),
+                count_y=count_from_spacing(field[3], 3.5),
+            ),
+            panels,
+        ),
         panel,
     )
     fig = build_layout_figure(
         panel, config, REFERENCE_PAIRS, REFERENCE_ROWS, tributary_columns=columns
     )
     tributary_traces = [t for t in fig.data if t.legendgroup == "tributary"]
-    column_traces = [t for t in fig.data if t.legendgroup == "columns"]
-    assert len(tributary_traces) == len(columns)
-    assert len(column_traces) == len(columns)
+    active_traces = [t for t in fig.data if t.legendgroup == "columns_active"]
+    assert len(tributary_traces) == len([c for c in columns if not c.excluded])
+    assert len(active_traces) == len([c for c in columns if not c.excluded])
     assert tributary_traces[0].hovertemplate is not None
 
 

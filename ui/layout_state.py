@@ -152,3 +152,18 @@ def layout_footprint_hash(layout: ResolvedLayout) -> str:
         f"{layout.config.alley_reach}:{layout.config.max_area_x:.4f}:"
         f"{layout.config.max_area_y:.4f}"
     )
+
+
+def bom_panel_count(layout: ResolvedLayout, *, live_locked: bool | None = None, live_locked_count: int | None = None) -> int:
+    """Panel count for BOM — honour locked target from layout or live session."""
+    if live_locked is None:
+        locked = layout.panels_locked
+        locked_count = layout.locked_panel_count
+    else:
+        locked = live_locked
+        locked_count = live_locked_count or 0
+    if locked and locked_count > 0:
+        return locked_count
+    if layout.panels_locked and layout.locked_panel_count > 0:
+        return layout.locked_panel_count
+    return layout.panel_count

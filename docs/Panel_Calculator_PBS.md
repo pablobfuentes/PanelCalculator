@@ -2,7 +2,7 @@
 
 **Source:** `plan de trabajo - Panel Calculator.txt`  
 **Project:** Ferrose — Solar panel layout, tributary loads, FEA, and BOM calculator  
-**Status:** In progress — Phase 3 complete
+**Status:** In progress — Phase 4 complete
 
 ---
 
@@ -24,10 +24,10 @@
 | 1 | Project scaffold | 9 | 9 / 9 |
 | 2 | Data model & layout | 9 | 9 / 9 |
 | 3 | Tributary area model | 6 | 6 / 6 |
-| 4 | Streamlit UI | 11 | 0 / 11 |
+| 4 | Streamlit UI | 11 | 9 / 11 |
 | 5 | FEA & code checks | 14 | 0 / 14 |
 | 6 | Results & export | 7 | 0 / 7 |
-| **Total** | | **56** | **24 / 56** |
+| **Total** | | **56** | **33 / 56** |
 
 ---
 
@@ -97,21 +97,21 @@
 
 ### 4.1 App shell & inputs
 
-- [ ] **4.1.1** Create `app.py` with sidebar inputs: panel dims, weight, max area, column spacing
-- [ ] **4.1.2** `[critical]` Add wind load section: wind speed (km/h), exposure category (A–D per CFE NTC-Viento 2020)
-- [ ] **4.1.3** Main area shows interactive Plotly canvas — grid + columns + tributary zones
+- [x] **4.1.1** Create `app.py` with sidebar inputs: panel dims, weight, max area, column spacing
+- [x] **4.1.2** `[critical]` Add wind load section: wind speed (km/h), exposure category (A–D per CFE NTC-Viento 2020)
+- [x] **4.1.3** Main area shows interactive Plotly canvas — grid + columns + tributary zones
 
 ### 4.2 Column placement
 
-- [ ] **4.2.1** Build `default_columns()` — equal spacing aligned to truss span (default 3–4 m)
-- [ ] **4.2.2** Allow coordinate override: text input for custom column X,Y — updates canvas on Enter
-- [ ] **4.2.3** Add obstacle zone input: user enters bounding box coords — columns inside flagged red and excluded from FEA
+- [x] **4.2.1** Build `default_columns()` — equal spacing aligned to truss span (default 3–4 m)
+- [x] **4.2.2** Allow coordinate override: text input for custom column X,Y — updates canvas on Enter
+- [x] **4.2.3** Add obstacle zone input: user enters bounding box coords — columns inside flagged red and excluded from FEA
 
 ### 4.3 Live BOM
 
-- [ ] **4.3.1** `[added]` Compute and display BOM live on every input change (no separate export step to see counts)
-- [ ] **4.3.2** Show: panel count, column count, total PTR 4×4 length (m), truss chord length (m), base plates
-- [ ] **4.3.3** Show estimated steel tonnage alongside BOM for quick cost estimation
+- [x] **4.3.1** `[added]` Compute and display BOM live on every input change (no separate export step to see counts)
+- [x] **4.3.2** Show: panel count, column count, total PTR 4×4 length (m), truss chord length (m), base plates
+- [x] **4.3.3** Show estimated steel tonnage alongside BOM for quick cost estimation
 
 **Phase 4 exit criteria:** Streamlit app runs with live canvas, wind inputs, column overrides, obstacle exclusion, and live BOM.
 

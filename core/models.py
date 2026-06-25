@@ -2,8 +2,13 @@
 
 from dataclasses import dataclass
 
+from core.wind import WIND_EXPOSURE_CATEGORIES
+
 INCH_TO_M = 0.0254
 DEFAULT_MID_CLAMP_GAP_M = INCH_TO_M  # 1"
+
+DEFAULT_WIND_SPEED_KMH = 120.0
+DEFAULT_WIND_EXPOSURE = "B"
 
 
 @dataclass
@@ -47,3 +52,19 @@ class LayoutConfig:
             raise ValueError("max_area_x must be positive")
         if self.max_area_y <= 0:
             raise ValueError("max_area_y must be positive")
+
+
+@dataclass
+class WindConfig:
+    """Wind load inputs per CFE NTC-Viento 2020 (basic service wind speed)."""
+
+    wind_speed_kmh: float = DEFAULT_WIND_SPEED_KMH
+    exposure_category: str = DEFAULT_WIND_EXPOSURE
+
+    def __post_init__(self) -> None:
+        if self.wind_speed_kmh <= 0:
+            raise ValueError("wind_speed_kmh must be positive")
+        if self.exposure_category not in WIND_EXPOSURE_CATEGORIES:
+            raise ValueError(
+                f"exposure_category must be one of {WIND_EXPOSURE_CATEGORIES}"
+            )

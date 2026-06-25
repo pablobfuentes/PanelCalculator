@@ -7,6 +7,8 @@ from core.models import (
     INCH_TO_M,
     LayoutConfig,
     PanelSpec,
+    WindConfig,
+    WIND_EXPOSURE_CATEGORIES,
 )
 
 
@@ -63,3 +65,31 @@ def test_layout_config_rejects_invalid_max_area():
 def test_layout_config_rejects_invalid_alley_reach():
     with pytest.raises(ValueError):
         LayoutConfig(alley_reach=1)
+
+
+def test_wind_config_defaults():
+    wind = WindConfig()
+    assert wind.wind_speed_kmh == 120.0
+    assert wind.exposure_category == "B"
+
+
+def test_wind_config_custom():
+    wind = WindConfig(wind_speed_kmh=150.0, exposure_category="D")
+    assert wind.wind_speed_kmh == 150.0
+    assert wind.exposure_category == "D"
+
+
+@pytest.mark.parametrize("category", ["A", "B", "C", "D"])
+def test_wind_config_accepts_exposure_categories(category: str):
+    wind = WindConfig(exposure_category=category)
+    assert wind.exposure_category == category
+
+
+def test_wind_config_rejects_invalid_exposure():
+    with pytest.raises(ValueError):
+        WindConfig(exposure_category="E")
+
+
+def test_wind_config_rejects_non_positive_speed():
+    with pytest.raises(ValueError):
+        WindConfig(wind_speed_kmh=0.0)
