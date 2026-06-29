@@ -19,7 +19,13 @@ from core.models import (
     WindConfig,
     WIND_EXPOSURE_CATEGORIES,
 )
+from core.sections import MaterialSections
 from core.wind import exposure_label
+from ui.materials_state import (
+    hydrate_material_widgets,
+    material_sections_from_session,
+    persist_material_widgets,
+)
 from ui.layout_state import (
     layout_config_from_inputs,
     layout_from_snapshot,
@@ -46,6 +52,7 @@ EXPOSURE_DESCRIPTIONS_SHORT: dict[str, str] = {
 
 VIEW_SETUP = "Setup"
 VIEW_ANALYSIS = "Analysis"
+VIEW_MATERIALS = "Materials"
 
 
 @dataclass
@@ -63,6 +70,7 @@ class SidebarInputs:
     num_rows_manual: int
     target_panels: int
     panels_locked: bool
+    materials: MaterialSections
 
 
 def _panel_from_session() -> PanelSpec:
@@ -106,6 +114,32 @@ def _seed_column_counts(field_width: float, field_height: float) -> None:
     st.session_state._column_counts_seeded = True
 
 
+def _render_section_inputs(role_label: str, role_key: str) -> None:
+    """Sidebar inputs for one steel section (A, Ix, Fy)."""
+    st.markdown(f"**{role_label}**")
+    st.number_input(
+        "A (m²)",
+        min_value=1e-6,
+        format="%.6f",
+        step=1e-5,
+        key=f"mat_{role_key}_a",
+    )
+    st.number_input(
+        "Ix (m⁴)",
+        min_value=1e-12,
+        format="%.3e",
+        step=1e-7,
+        key=f"mat_{role_key}_ix",
+        help="Strong-axis inertia in m⁴ (divide mm⁴ by 10¹²).",
+    )
+    st.number_input(
+        "Fy (MPa)",
+        min_value=1.0,
+        step=5.0,
+        key=f"mat_{role_key}_fy",
+    )
+
+
 def render_sidebar(active_view: str) -> SidebarInputs:
     """Render sidebar sections for the active main view."""
     init_session_defaults()
@@ -113,6 +147,7 @@ def render_sidebar(active_view: str) -> SidebarInputs:
     setup_accepted = bool(st.session_state.get("setup_accepted"))
     show_setup_fields = active_view == VIEW_SETUP
     show_analysis_fields = active_view == VIEW_ANALYSIS and setup_accepted
+    show_materials_fields = active_view == VIEW_MATERIALS
     panels_locked = bool(st.session_state.panels_locked)
 
     with st.sidebar:
@@ -281,6 +316,15 @@ def render_sidebar(active_view: str) -> SidebarInputs:
                 f"Panel count **locked** at {int(get_persist('persist_locked_panel_count'))} panels"
             )
 
+        if show_materials_fields:
+            hydrate_material_widgets()
+            st.header("Steel sections")
+            st.caption("AISC defaults — edit for IMCA or project specs.")
+            _render_section_inputs("PTR post (4×4)", "ptr")
+            _render_section_inputs("Secondary beam", "beam")
+            _render_section_inputs("Truss chord", "chord")
+            persist_material_widgets()
+
         st.divider()
         if st.button("Reset session", type="secondary", width="stretch", key="sb_reset"):
             reset_app_session()
@@ -322,6 +366,7 @@ def render_sidebar(active_view: str) -> SidebarInputs:
         num_rows_manual=num_rows_manual,
         target_panels=target_panels,
         panels_locked=panels_locked,
+        materials=material_sections_from_session(),
     )
 
 

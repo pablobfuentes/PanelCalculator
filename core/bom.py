@@ -5,10 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from core.columns import Column, active_columns
-
-# Placeholder section weights (kg/m) — replace with SteelSection in Phase 5.
-PTR_4X4_KG_PER_M = 23.0
-TRUSS_CHORD_KG_PER_M = 8.5
+from core.sections import MaterialSections, default_material_sections
 
 DEFAULT_POST_EMBEDMENT_M = 0.6
 DEFAULT_COLUMN_HEIGHT_M = 2.5
@@ -82,10 +79,19 @@ def truss_chord_length_m(columns: list[Column]) -> float:
     return CHORDS_PER_TRUSS_BAY * sum(horizontal_truss_spans(columns))
 
 
-def steel_tonnage(ptr_length_m: float, chord_length_m: float) -> float:
+def steel_tonnage(
+    ptr_length_m: float,
+    chord_length_m: float,
+    *,
+    base_plate_count: int = 0,
+    materials: MaterialSections | None = None,
+) -> float:
     """Estimated structural steel mass (tonnes)."""
+    catalog = materials or default_material_sections()
     mass_kg = (
-        ptr_length_m * PTR_4X4_KG_PER_M + chord_length_m * TRUSS_CHORD_KG_PER_M
+        ptr_length_m * catalog.ptr_post.mass_per_m
+        + chord_length_m * catalog.truss_chord.mass_per_m
+        + base_plate_count * catalog.base_plate.mass_kg
     )
     return mass_kg / 1000.0
 
@@ -95,14 +101,24 @@ def compute_bom(
     panel_count: int,
     columns: list[Column],
     column_height_m: float,
+    materials: MaterialSections | None = None,
 ) -> BomResult:
     """Compute live BOM from layout panels and resolved column grid."""
+    catalog = materials or default_material_sections()
     active = active_columns(columns)
     active_count = len(active)
     per_post = ptr_length_m(column_height_m)
     ptr_total = active_count * per_post
     chord_total = truss_chord_length_m(columns)
-    tonnage = steel_tonnage(ptr_total, chord_total)
+    tonnage = steel_tonnage(
+        ptr_total,
+        chord_total,
+        base_plate_count=active_count,
+        materials=catalog,
+    )
+    ptr_kg_m = catalog.ptr_post.mass_per_m
+    chord_kg_m = catalog.truss_chord.mass_per_m
+    plate_kg = catalog.base_plate.mass_kg
 
     lines = (
         BomLine("Panels", float(panel_count), "ea"),
@@ -110,8 +126,16 @@ def compute_bom(
         BomLine("Columns (active)", float(active_count), "ea"),
         BomLine("PTR 4×4 length", ptr_total, "m", note=f"{per_post:.2f} m per active post"),
         BomLine("Truss chord length", chord_total, "m", note="Top + bottom chord per bay"),
-        BomLine("Base plates", float(active_count), "ea", note="One per active column"),
-        BomLine("Est. steel tonnage", tonnage, "t", note="PTR + chord (placeholder weights)"),
+        BomLine("Base plates", float(active_count), "ea", note=f"{plate_kg:.1f} kg/ea"),
+        BomLine(
+            "Est. steel tonnage",
+            tonnage,
+            "t",
+            note=(
+                f"PTR {ptr_kg_m:.1f} kg/m + chord {chord_kg_m:.1f} kg/m "
+                f"+ plate {plate_kg:.1f} kg/ea"
+            ),
+        ),
     )
 
     return BomResult(

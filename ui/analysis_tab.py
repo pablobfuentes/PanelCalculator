@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from core.fea import fea_result_rows, run_frame_analysis
+from core.code_checks import evaluate_code_checks
 from core.bom import compute_bom
 from core.columns import active_columns, column_spacings, panel_field_bbox
 from core.tributary import (
@@ -11,6 +13,7 @@ from core.tributary import (
     tributary_partition_valid,
 )
 from ui.bom_panel import render_bom_panel
+from ui.code_check_panel import render_code_check_table
 from ui.canvas import build_tributary_columns, render_layout_canvas
 from ui.layout_state import bom_panel_count, layout_from_snapshot
 from ui.session_store import hydrate_widgets, persist_widgets
@@ -145,6 +148,7 @@ def render_analysis_tab(inputs: SidebarInputs) -> None:
             ),
             columns=zoned_columns,
             column_height_m=inputs.column_height_m,
+            materials=inputs.materials,
         )
         render_bom_panel(bom)
 
@@ -165,3 +169,33 @@ def render_analysis_tab(inputs: SidebarInputs) -> None:
         width="stretch",
         hide_index=True,
     )
+
+    st.markdown("#### FEA results")
+    st.caption(
+        "PyNite 3D frame: fixed post bases, tributary dead/live/wind at post tops, "
+        "chord members between columns. Results per load combination (Phase 5.3)."
+    )
+    if not partition_ok:
+        st.warning("Fix tributary partition before running FEA.")
+    elif not active:
+        st.info("No active columns — add columns or remove obstacles.")
+    else:
+        fea = run_frame_analysis(
+            zoned_columns,
+            column_height_m=inputs.column_height_m,
+            materials=inputs.materials,
+            panel=layout.panel,
+            wind=inputs.wind,
+        )
+        if not fea.solved:
+            st.error(fea.error or "FEA solver failed.")
+        else:
+            f1, f2, f3 = st.columns(3)
+            f1.metric("Nodes", fea.node_count)
+            f2.metric("Members", fea.member_count)
+            f3.metric("Combinations", len({r.combo_id for r in fea.results}))
+            st.dataframe(fea_result_rows(fea), width="stretch", hide_index=True)
+
+            st.markdown("#### Code checks")
+            checks = evaluate_code_checks(fea.results, materials=inputs.materials)
+            render_code_check_table(checks)

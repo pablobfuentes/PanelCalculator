@@ -12,8 +12,11 @@ import streamlit as st
 from core.bom import DEFAULT_COLUMN_HEIGHT_M
 from core.columns import MIN_COLUMN_COUNT
 from core.models import DEFAULT_WIND_EXPOSURE, DEFAULT_WIND_SPEED_KMH
+from core.sections import default_material_sections
 
 VIEW_SETUP = "Setup"
+
+_section_defaults = default_material_sections()
 
 PERSIST_DEFAULTS: dict[str, object] = {
     "persist_length": 2.0,
@@ -38,6 +41,15 @@ PERSIST_DEFAULTS: dict[str, object] = {
     "persist_wind_exposure": DEFAULT_WIND_EXPOSURE,
     "persist_column_overrides": "",
     "persist_obstacle_zones": "",
+    "persist_sec_ptr_a": _section_defaults.ptr_post.A,
+    "persist_sec_ptr_ix": _section_defaults.ptr_post.Ix,
+    "persist_sec_ptr_fy": _section_defaults.ptr_post.Fy,
+    "persist_sec_beam_a": _section_defaults.secondary_beam.A,
+    "persist_sec_beam_ix": _section_defaults.secondary_beam.Ix,
+    "persist_sec_beam_fy": _section_defaults.secondary_beam.Fy,
+    "persist_sec_chord_a": _section_defaults.truss_chord.A,
+    "persist_sec_chord_ix": _section_defaults.truss_chord.Ix,
+    "persist_sec_chord_fy": _section_defaults.truss_chord.Fy,
 }
 
 # Ephemeral widget keys -> durable persist keys

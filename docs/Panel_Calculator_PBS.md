@@ -2,7 +2,7 @@
 
 **Source:** `plan de trabajo - Panel Calculator.txt`  
 **Project:** Ferrose — Solar panel layout, tributary loads, FEA, and BOM calculator  
-**Status:** In progress — Phase 4 complete
+**Status:** In progress — Phase 5 complete
 
 ---
 
@@ -25,9 +25,9 @@
 | 2 | Data model & layout | 9 | 9 / 9 |
 | 3 | Tributary area model | 6 | 6 / 6 |
 | 4 | Streamlit UI | 11 | 9 / 11 |
-| 5 | FEA & code checks | 14 | 0 / 14 |
+| 5 | FEA & code checks | 14 | 14 / 14 |
 | 6 | Results & export | 7 | 0 / 7 |
-| **Total** | | **56** | **33 / 56** |
+| **Total** | | **56** | **47 / 56** |
 
 ---
 
@@ -121,29 +121,29 @@
 
 ### 5.1 Material & section properties
 
-- [ ] **5.1.1** Define `SteelSection` dataclass: `A` (area), `Ix` (moment of inertia), `Fy` (yield strength)
-- [ ] **5.1.2** `[critical]` Enter PTR 4"×4" values from IMCA or AISC table — double-check units (mm⁴ not cm⁴)
-- [ ] **5.1.3** Enter secondary beam and Warren truss chord section values
+- [x] **5.1.1** Define `SteelSection` dataclass: `A` (area), `Ix` (moment of inertia), `Fy` (yield strength)
+- [x] **5.1.2** `[critical]` Enter PTR 4"×4" values from IMCA or AISC table — double-check units (mm⁴ not cm⁴)
+- [x] **5.1.3** Enter secondary beam and Warren truss chord section values
 
 ### 5.2 Load combinations
 
-- [ ] **5.2.1** `[key]` Build `load_combinations()` — returns table of factored combos per CFE (or ASCE 7 if preferred)
-- [ ] **5.2.2** `[added]` Display load combination table in Streamlit UI for engineer audit before solver runs
-- [ ] **5.2.3** Include at minimum: `1.2D + 1.6L`, `0.9D + 1.6W`, `1.2D + 1.0W + 1.0L`
+- [x] **5.2.1** `[key]` Build `load_combinations()` — returns table of factored combos per CFE (or ASCE 7 if preferred)
+- [x] **5.2.2** `[added]` Display load combination table in Streamlit UI for engineer audit before solver runs
+- [x] **5.2.3** Include at minimum: `1.2D + 1.6L`, `0.9D + 1.6W`, `1.2D + 1.0W + 1.0L`
 
 ### 5.3 FEA integration
 
-- [ ] **5.3.1** Map confirmed column positions as fixed or pinned nodes in PyNite/anaStruct
-- [ ] **5.3.2** Apply tributary area loads from Phase 3 onto beam elements
-- [ ] **5.3.3** Run solver for each load combination; store results per combo
-- [ ] **5.3.4** Extract: max bending moment, max axial force, max deflection per element
+- [x] **5.3.1** Map confirmed column positions as fixed or pinned nodes in PyNite/anaStruct
+- [x] **5.3.2** Apply tributary area loads from Phase 3 onto beam elements
+- [x] **5.3.3** Run solver for each load combination; store results per combo
+- [x] **5.3.4** Extract: max bending moment, max axial force, max deflection per element
 
 ### 5.4 Code checks
 
-- [ ] **5.4.1** `[key]` Check bending stress: `fb = M/S ≤ 0.66Fy` (or LRFD equivalent)
-- [ ] **5.4.2** `[key]` Check deflection: `δmax ≤ L/240` (or project-specified limit)
-- [ ] **5.4.3** Flag each element PASS (green) / WARN (amber, >80% utilization) / FAIL (red)
-- [ ] **5.4.4** `[critical]` Run Phase 0 reference case through solver — assert match to hand calc within ±2%
+- [x] **5.4.1** `[key]` Check bending stress: `fb = M/S ≤ 0.66Fy` (or LRFD equivalent)
+- [x] **5.4.2** `[key]` Check deflection: `δmax ≤ L/240` (or project-specified limit)
+- [x] **5.4.3** Flag each element PASS (green) / WARN (amber, >80% utilization) / FAIL (red)
+- [x] **5.4.4** `[critical]` Run Phase 0 reference case through solver — assert match to hand calc within ±2%
 
 **Phase 5 exit criteria:** FEA runs all combos; code checks and utilization flags correct; reference case within ±2% of hand calculation.
 
@@ -188,7 +188,7 @@ Use before marking the project complete:
 - [ ] `pytest` passes for layout and tributary modules
 - [ ] Streamlit app: responsive at common viewport widths
 - [ ] Plotly canvas: panels, alleys, columns, tributary zones, and FEA status colors render correctly
-- [ ] Phase 0 / reference case: FEA vs hand calc within ±2%
+- [x] Phase 0 / reference case: FEA vs hand calc within ±2%
 - [ ] Excel and PDF exports open and match on-screen results
 - [ ] `README/ChangeLog.md` updated per approved changes
 - [ ] Failures logged in `README/FAIL_LOG.md` if any occurred

@@ -5,12 +5,17 @@ from __future__ import annotations
 import streamlit as st
 
 from core.bom import BomResult
+from ui.bom_settings_dialog import render_bom_settings_button
 
 
 def render_bom_panel(bom: BomResult) -> None:
     """Render BOM metrics beside the design canvas."""
-    st.markdown("#### Live BOM")
-    st.caption("Updates with layout, column grid, and obstacles.")
+    header_col, settings_col = st.columns([5, 1])
+    with header_col:
+        st.markdown("#### Live BOM")
+    with settings_col:
+        render_bom_settings_button()
+    st.caption("Updates with layout, column grid, and material profiles.")
 
     st.metric("Panels", bom.panel_count)
     st.metric("Columns (active)", bom.active_column_count)
