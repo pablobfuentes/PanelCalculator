@@ -15,31 +15,30 @@ from core.tributary import (
 from ui.bom_panel import render_bom_panel
 from ui.code_check_panel import render_code_check_table
 from ui.canvas import build_tributary_columns, render_layout_canvas
+from ui.game_shell import close_game_shell, render_game_shell
 from ui.layout_state import bom_panel_count, layout_from_snapshot
 from ui.session_store import hydrate_widgets, persist_widgets
 from ui.sidebar_inputs import SidebarInputs
 
 
 def render_analysis_tab(inputs: SidebarInputs) -> None:
-    st.subheader("Analysis")
-    st.caption(
-        "Column grid, tributary areas, and wind inputs. "
-        "Switch to **Setup** in the main view to change the panel layout."
+    render_game_shell(
+        "Structure",
+        "Column grid, tributary loads, FEA, and code checks.",
     )
 
     if not st.session_state.get("setup_accepted") or "setup_snapshot" not in st.session_state:
-        st.info(
-            "Complete **Setup**, configure a valid layout, then click "
-            "**Accept layout → continue** before working here."
-        )
+        st.info("Complete **Layout** and press **→ NEXT** before working here.")
+        close_game_shell()
         return
 
     if st.session_state.pop("show_accepted_message", False):
-        st.success("Layout accepted. You are now in **Analysis**.")
+        st.toast("Layout accepted — Structure is now active", icon="✅")
 
     layout = layout_from_snapshot(st.session_state.setup_snapshot)
     if layout.panel_count == 0:
-        st.warning("Accepted layout has no panels. Return to **Setup** and fix the configuration.")
+        st.warning("Accepted layout has no panels. Return to **Layout** and fix the configuration.")
+        close_game_shell()
         return
 
     field = panel_field_bbox(layout.panels)
@@ -91,6 +90,7 @@ def render_analysis_tab(inputs: SidebarInputs) -> None:
 
     if parse_error:
         st.error(parse_error)
+        close_game_shell()
         return
 
     active = active_columns(zoned_columns)
@@ -119,6 +119,7 @@ def render_analysis_tab(inputs: SidebarInputs) -> None:
     st.markdown("#### Design canvas")
     canvas_col, bom_col = st.columns([3, 1], gap="medium")
     with canvas_col:
+        st.markdown('<div class="sf-canvas-zone">', unsafe_allow_html=True)
         render_layout_canvas(
             layout,
             column_count_x=inputs.column_count_x,
@@ -126,8 +127,11 @@ def render_analysis_tab(inputs: SidebarInputs) -> None:
             column_overrides_text=column_overrides,
             obstacle_zones_text=obstacle_zones,
             show_tributary=True,
-            title="Panel layout — grid, columns, tributary",
+            title="",
+            dark_theme=True,
+            figure_height=480,
         )
+        st.markdown("</div>", unsafe_allow_html=True)
         with st.expander("Legend"):
             st.markdown(
                 """
@@ -199,3 +203,5 @@ def render_analysis_tab(inputs: SidebarInputs) -> None:
             st.markdown("#### Code checks")
             checks = evaluate_code_checks(fea.results, materials=inputs.materials)
             render_code_check_table(checks)
+
+    close_game_shell()

@@ -7,21 +7,16 @@ import streamlit as st
 from core.loads import load_combination_rows
 from core.material_library import library_table_row
 from core.sections import base_plate_summary_row, section_summary_row
+from ui.game_shell import close_game_shell, render_game_shell
 from ui.material_catalogue_io import render_catalogue_import_export
 from ui.material_library_state import get_library
 from ui.materials_state import material_sections_from_session
 
 
 def render_materials_tab() -> None:
-    st.subheader("Materials")
-    st.caption(
-        "Steel section properties and factored load combinations for FEA (Phase 5.3). "
-        "Edit section values in the sidebar."
-    )
-
-    st.info(
-        "**Section units:** A in m² · Ix in **m⁴** (not mm⁴) · Fy in MPa · "
-        "Mass = A × 7850 kg/m³."
+    render_game_shell(
+        "Materials",
+        "Steel profiles and load combinations for FEA and code checks.",
     )
 
     materials = material_sections_from_session()
@@ -32,8 +27,7 @@ def render_materials_tab() -> None:
         base_plate_summary_row("Base plate", materials.base_plate),
     ]
 
-    st.markdown("#### Section catalog")
-    st.caption("Active profiles assigned to each structural role (see Live BOM ⚙ for assignments).")
+    st.markdown("#### Active profiles")
     st.dataframe(
         [
             {
@@ -76,20 +70,12 @@ def render_materials_tab() -> None:
     with st.expander("Catalog notes"):
         st.markdown(
             """
-            Default sections are converted from **AISC** imperial tables to SI:
-
-            - **PTR post** — HSS4×4×¼ (A500 Gr. B)
-            - **Secondary beam** — HSS3×2×¼
-            - **Truss chord** — L2×2×¼ angle
-
-            For IMCA metric tubes, enter catalog values in the sidebar. Convert **Ix**
-            to m⁴ (divide mm⁴ by 10¹²).
+            Default sections are converted from **AISC** imperial tables to SI.
+            Edit assigned profiles via **Live BOM ⚙** or the sidebar.
             """
         )
 
     st.markdown("#### Load combinations")
-    st.caption(
-        "Factored combinations per CFE practice — audit before running the solver. "
-        "**D** = dead (panel self-weight), **L** = live/maintenance, **W** = wind (NTC-Viento 2020)."
-    )
     st.dataframe(load_combination_rows(), width="stretch", hide_index=True)
+
+    close_game_shell()

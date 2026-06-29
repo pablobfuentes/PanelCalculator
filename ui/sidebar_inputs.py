@@ -31,9 +31,9 @@ from ui.layout_state import (
     layout_from_snapshot,
     resolve_layout,
 )
+from ui.panel_catalog import init_panel_catalog, selected_panel_spec, sync_selected_to_legacy_persist
 from ui.session_store import (
     ANALYSIS_WIDGET_KEYS,
-    SETUP_WIDGET_KEYS,
     get_persist,
     hydrate_panel_lock_state,
     hydrate_widgets,
@@ -74,12 +74,9 @@ class SidebarInputs:
 
 
 def _panel_from_session() -> PanelSpec:
-    return PanelSpec(
-        length=float(get_persist("persist_length")),
-        width=float(get_persist("persist_width")),
-        weight=float(get_persist("persist_weight")),
-        tilt_angle=float(get_persist("persist_tilt")),
-    )
+    init_panel_catalog()
+    sync_selected_to_legacy_persist()
+    return selected_panel_spec()
 
 
 def _config_from_session() -> LayoutConfig:
@@ -154,92 +151,8 @@ def render_sidebar(active_view: str) -> SidebarInputs:
         st.caption(f"**{active_view}**")
 
         if show_setup_fields:
-            hydrate_widgets(SETUP_WIDGET_KEYS)
-
-            st.header("Panel")
-            st.number_input(
-                "Length (m)", min_value=0.1, step=0.1, key="sb_length"
-            )
-            st.number_input("Width (m)", min_value=0.1, step=0.1, key="sb_width")
-            st.number_input(
-                "Weight (kg)", min_value=0.1, step=0.5, key="sb_weight"
-            )
-            st.number_input(
-                "Tilt (°)", min_value=0.0, max_value=90.0, step=1.0, key="sb_tilt"
-            )
-
-            st.header("Layout")
-            st.number_input(
-                'Mid-clamp gap (in)', min_value=0.0, step=0.25, key="sb_mid_clamp"
-            )
-            st.number_input(
-                "Alley width (m)", min_value=0.1, step=0.1, key="sb_alley_w"
-            )
-            st.number_input(
-                "Alley reach (panels)",
-                min_value=2,
-                max_value=4,
-                step=1,
-                key="sb_alley_reach",
-            )
-            st.number_input(
-                "Max area X (m)", min_value=1.0, step=0.5, key="sb_max_x"
-            )
-            st.number_input(
-                "Max area Y (m)", min_value=1.0, step=0.5, key="sb_max_y"
-            )
-
-            st.header("Grid mode")
-            st.checkbox("Auto-fit to max area", key="sb_use_fit")
-            rendered_setup_keys = list(SETUP_WIDGET_KEYS)
-            if not st.session_state.sb_use_fit:
-                st.number_input(
-                    "Pairs per row", min_value=0, step=1, key="sb_num_pairs"
-                )
-                st.number_input("Rows", min_value=0, step=1, key="sb_num_rows")
-            else:
-                rendered_setup_keys = [
-                    key for key in SETUP_WIDGET_KEYS if key not in ("sb_num_pairs", "sb_num_rows")
-                ]
-
-            if panels_locked:
-                st.session_state.sb_panels_value = int(st.session_state.locked_panel_count)
-
-            st.header("Panel count")
-            panels_col, lock_col = st.columns([4, 1])
-            with panels_col:
-                st.number_input(
-                    "Panels",
-                    min_value=2,
-                    step=2,
-                    key="sb_panels_value",
-                    help="Total panels in a rectangular grid (even count). "
-                    "Lock to fit this count within the max area.",
-                )
-            with lock_col:
-                st.write("")
-                lock_icon = "🔒" if panels_locked else "🔓"
-                lock_help = "Unlock panel count" if panels_locked else "Lock panel count"
-                if st.button(
-                    lock_icon,
-                    width="stretch",
-                    key="sb_lock_panels",
-                    help=lock_help,
-                ):
-                    if panels_locked:
-                        st.session_state.panels_locked = False
-                    else:
-                        st.session_state.panels_locked = True
-                        st.session_state.locked_panel_count = int(
-                            st.session_state.sb_panels_value
-                        )
-                        st.session_state.persist_panels_value = (
-                            st.session_state.locked_panel_count
-                        )
-                    persist_panel_lock_state()
-
-            persist_widgets(rendered_setup_keys + ["sb_panels_value"])
-            persist_panel_lock_state()
+            st.caption("Configure layout in the main view.")
+            st.info("Panel, grid, and alley controls are on the **Layout** screen.")
 
         if active_view == VIEW_ANALYSIS and not setup_accepted:
             st.info("Accept a layout in **Setup** to unlock Structure and Wind inputs.")

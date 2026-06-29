@@ -50,6 +50,8 @@ def render_layout_canvas(
     obstacle_zones_text: str = "",
     show_tributary: bool,
     title: str,
+    dark_theme: bool = False,
+    figure_height: int | None = None,
 ) -> tuple[list | None, list[Rect]]:
     """Interactive Plotly canvas: grid, optional columns + tributary overlay."""
     tributary_columns = None
@@ -69,8 +71,10 @@ def render_layout_canvas(
         layout.num_pairs_per_row,
         layout.num_rows,
         tributary_columns=tributary_columns,
-        obstacle_zones=obstacles if obstacles else None,
+        obstacle_zones=obstacle_zones if obstacles else None,
         title=title,
+        dark_theme=dark_theme,
+        figure_height=figure_height or (420 if dark_theme else 700),
     )
     st.plotly_chart(fig, width="stretch")
     return tributary_columns, obstacles

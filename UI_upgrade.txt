@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SolarForge — Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --bg:        #0D1117;
+  --surface:   #161B27;
+  --surface2:  #1E2640;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.13);
+  --amber:     #F5A623;
+  --amber-dim: rgba(245,163,35,0.15);
+  --amber-glow:rgba(245,163,35,0.35);
+  --sky:       #5BB8F5;
+  --sky-dim:   rgba(91,184,245,0.18);
+  --green:     #3ECF8E;
+  --red:       #E74C3C;
+  --alley:     rgba(245,163,35,0.55);
+  --alley-border: #F5A623;
+  --panel-fill:#3B7DD8;
+  --panel-stroke:#5BB8F5;
+  --text:      #E8EAF0;
+  --text-dim:  #7A8499;
+  --text-muted:#3D4457;
+  --radius:    10px;
+  --radius-lg: 16px;
+  --font-game: 'Rajdhani', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-body); }
+
+/* ── STAGE STEPPER ──────────────────────────────────────── */
+.stepper {
+  position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 0; z-index: 100;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-top: none; border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  padding: 0 8px 8px; box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+}
+.step {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; cursor: pointer; position: relative;
+  font-family: var(--font-game); font-weight: 600; font-size: 13px;
+  letter-spacing: 0.08em; color: var(--text-dim); text-transform: uppercase;
+  transition: color 0.2s;
+}
+.step.active { color: var(--amber); }
+.step.done { color: var(--green); }
+.step-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; border: 1.5px solid currentColor;
+  transition: all 0.3s; background: transparent; flex-shrink: 0;
+}
+.step.active .step-icon { background: var(--amber); border-color: var(--amber); color: #000; box-shadow: 0 0 12px var(--amber-glow); }
+.step.done .step-icon { background: var(--green); border-color: var(--green); color: #000; }
+.step-connector { width: 32px; height: 2px; background: var(--border2); flex-shrink: 0; position: relative; }
+.step-connector::after { content:''; position:absolute; top:0; left:0; height:100%; width: 0%; background: var(--green); transition: width 0.6s ease; }
+.step.done + .step-connector::after { width: 100%; }
+
+/* ── MAIN LAYOUT ────────────────────────────────────────── */
+.app {
+  display: flex; height: 100vh; padding-top: 64px;
+  gap: 0; position: relative; overflow: hidden;
+}
+
+/* ── LEFT PANEL ─────────────────────────────────────────── */
+.left-panel {
+  width: 220px; flex-shrink: 0;
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 0;
+  z-index: 10; overflow-y: auto;
+}
+.panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+.section-label {
+  font-family: var(--font-game); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+/* Panel type selector */
+.panel-type-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.panel-type-btn {
+  width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-game); font-weight: 700; font-size: 14px;
+  cursor: pointer; transition: all 0.2s; position: relative; color: var(--text);
+  background: var(--surface2);
+}
+.panel-type-btn.active { border-color: var(--sky); box-shadow: 0 0 10px rgba(91,184,245,0.3); }
+.panel-type-btn.add-btn { border-style: dashed; color: var(--text-dim); font-size: 20px; font-weight: 300; }
+.panel-type-btn.add-btn:hover { border-color: var(--amber); color: var(--amber); }
+#btn-A { background: rgba(59,125,216,0.2); border-color: rgba(59,125,216,0.6); color: #5BB8F5; }
+#btn-B { background: rgba(62,207,142,0.15); border-color: rgba(62,207,142,0.5); color: #3ECF8E; }
+#btn-A.active { box-shadow: 0 0 14px rgba(91,184,245,0.4); border-color: #5BB8F5; }
+#btn-B.active { box-shadow: 0 0 14px rgba(62,207,142,0.4); border-color: #3ECF8E; }
+
+/* Selected panel card */
+.panel-card {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 12px; border: 1px solid var(--border2);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.panel-card-icon {
+  width: 48px; height: 48px; border-radius: 10px;
+  background: rgba(59,125,216,0.2); border: 1.5px solid rgba(91,184,245,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; margin: 0 auto 4px;
+}
+.panel-name { font-family: var(--font-game); font-weight: 700; font-size: 15px; text-align: center; color: var(--sky); }
+.panel-stats { display: flex; flex-direction: column; gap: 4px; }
+.stat-row { display: flex; justify-content: space-between; align-items: center; }
+.stat-key { font-size: 11px; color: var(--text-dim); }
+.stat-val { font-size: 12px; font-weight: 600; color: var(--text); font-family: var(--font-game); }
+
+/* Count lock */
+.count-lock-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 10px 12px; border: 1px solid var(--border2);
+}
+.count-num { font-family: var(--font-game); font-size: 26px; font-weight: 700; color: var(--amber); flex: 1; }
+.count-label { font-size: 10px; color: var(--text-dim); line-height: 1.3; }
+.lock-btn {
+  width: 28px; height: 28px; border-radius: 6px; border: 1.5px solid var(--border2);
+  background: var(--surface); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px; transition: all 0.2s; color: var(--text-dim);
+}
+.lock-btn.locked { border-color: var(--amber); background: var(--amber-dim); color: var(--amber); }
+
+/* Area display */
+.area-display {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 10px 12px; border: 1px solid var(--border2);
+  text-align: center;
+}
+.area-label { font-size: 10px; color: var(--text-dim); margin-bottom: 4px; }
+.area-val { font-family: var(--font-game); font-size: 18px; font-weight: 700; color: var(--text); }
+.area-sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+/* ── CANVAS AREA ─────────────────────────────────────────── */
+.canvas-wrap {
+  flex: 1; position: relative; overflow: hidden;
+  background: #0A0E18;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(91,184,245,0.03) 0%, transparent 70%),
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+}
+
+/* Dimension bubbles on edges */
+.dim-bubble {
+  position: absolute; background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 4px 10px;
+  font-family: var(--font-game); font-size: 13px; font-weight: 600; color: var(--text);
+  cursor: text; display: flex; align-items: center; gap: 4px;
+  transition: border-color 0.2s;
+  user-select: none;
+}
+.dim-bubble:hover { border-color: var(--amber); }
+.dim-bubble input {
+  background: transparent; border: none; outline: none;
+  width: 40px; text-align: center; color: var(--text);
+  font-family: var(--font-game); font-size: 13px; font-weight: 600;
+}
+.dim-bubble .dim-unit { font-size: 11px; color: var(--text-dim); }
+#dim-w { top: 50%; left: 50%; transform: translate(-50%, -220px); }
+#dim-h { top: 50%; right: calc(50% - 240px); transform: translateY(-50%); }
+
+/* The solar canvas itself */
+#solarCanvas {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(91,184,245,0.2), 0 8px 60px rgba(0,0,0,0.6);
+  cursor: crosshair;
+}
+
+/* Pin symbol at origin */
+.pin-mark {
+  position: absolute; bottom: calc(50% - 128px); left: calc(50% - 215px);
+  transform: translate(-50%, 50%);
+  font-size: 22px; line-height: 1; filter: drop-shadow(0 0 6px var(--amber));
+  pointer-events: none;
+}
+
+/* ── BOTTOM HUD ──────────────────────────────────────────── */
+.hud {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 10px 16px;
+  display: flex; align-items: stretch; gap: 8px;
+  box-shadow: 0 8px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,163,35,0.08);
+  z-index: 50; min-width: 560px;
+}
+
+.hud-var {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 4px 10px; border-radius: 12px; cursor: default;
+  position: relative; transition: background 0.2s; min-width: 110px;
+}
+.hud-var:hover { background: var(--surface2); }
+.hud-var-label {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 4px;
+}
+.hud-var-label .info-dot {
+  width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--text-muted);
+  display: flex; align-items: center; justify-content: center; font-size: 8px;
+  color: var(--text-muted); cursor: help;
+}
+.hud-controls { display: flex; align-items: center; gap: 6px; }
+.hud-btn {
+  width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--border2);
+  background: var(--surface2); color: var(--text-dim); font-size: 16px; font-weight: 300;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; line-height: 1; user-select: none;
+}
+.hud-btn:hover { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+.hud-val {
+  font-family: var(--font-game); font-size: 22px; font-weight: 700; color: var(--text);
+  min-width: 36px; text-align: center; line-height: 1;
+}
+.hud-unit { font-size: 10px; color: var(--text-dim); align-self: flex-end; margin-bottom: 3px; }
+.hud-divider { width: 1px; background: var(--border); align-self: stretch; margin: 4px 0; flex-shrink: 0; }
+
+/* Tooltip preview on hover */
+.hud-tooltip {
+  position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%);
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 10px; width: 140px;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 200;
+}
+.hud-var:hover .hud-tooltip { opacity: 1; }
+.hud-tooltip canvas { display: block; margin: 0 auto; }
+.hud-tooltip-label { font-size: 10px; color: var(--text-dim); text-align: center; margin-top: 6px; line-height: 1.4; }
+
+/* OK Proceed button */
+.proceed-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 6px 18px; background: var(--amber); border-radius: 14px;
+  cursor: pointer; transition: all 0.2s; gap: 1px;
+  box-shadow: 0 0 20px var(--amber-glow); margin-left: 6px; border: none;
+  animation: pulse-glow 2.5s ease-in-out infinite;
+  min-width: 72px;
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 18px var(--amber-glow); }
+  50% { box-shadow: 0 0 32px rgba(245,163,35,0.6); }
+}
+.proceed-btn:hover { transform: scale(1.05); background: #FFB740; }
+.proceed-icon { font-size: 22px; line-height: 1; }
+.proceed-label { font-family: var(--font-game); font-size: 10px; font-weight: 700; color: #000; letter-spacing: 0.1em; }
+
+/* ── MODAL ───────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  z-index: 200; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-lg);
+  padding: 24px; width: 380px; max-width: 90vw;
+  transform: translateY(20px); transition: transform 0.25s;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.7);
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-title { font-family: var(--font-game); font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--amber); }
+.modal-field { margin-bottom: 14px; }
+.modal-label { font-size: 11px; color: var(--text-dim); margin-bottom: 5px; }
+.modal-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 8px 12px; color: var(--text);
+  font-family: var(--font-body); font-size: 13px; outline: none;
+  transition: border-color 0.2s;
+}
+.modal-input:focus { border-color: var(--amber); }
+.modal-row { display: flex; gap: 10px; }
+.modal-row .modal-field { flex: 1; }
+.modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+.modal-btn {
+  flex: 1; padding: 10px; border-radius: 8px; border: none; cursor: pointer;
+  font-family: var(--font-game); font-size: 14px; font-weight: 700; letter-spacing: 0.05em;
+  transition: all 0.2s;
+}
+.modal-btn.primary { background: var(--amber); color: #000; }
+.modal-btn.secondary { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border2); }
+.color-picker-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.color-swatch {
+  width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.15s; flex-shrink: 0;
+}
+.color-swatch.selected { border-color: #fff; transform: scale(1.15); }
+
+/* ── INFO TOOLTIP PANEL ──────────────────────────────────── */
+.info-panel {
+  position: fixed; bottom: 110px; right: 24px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); padding: 14px; width: 200px;
+  z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.info-panel.visible { opacity: 1; }
+.info-panel-title { font-family: var(--font-game); font-size: 13px; font-weight: 700; color: var(--amber); margin-bottom: 8px; }
+.info-panel canvas { display: block; width: 100%; }
+.info-panel-desc { font-size: 11px; color: var(--text-dim); margin-top: 8px; line-height: 1.5; }
+
+/* Hover anim previews inside HUD tooltips */
+.preview-mini { width: 120px; height: 80px; }
+
+/* notification toast */
+.toast {
+  position: fixed; top: 80px; right: 20px; z-index: 999;
+  background: var(--surface2); border: 1px solid var(--green);
+  border-radius: 10px; padding: 10px 16px;
+  font-size: 13px; color: var(--green);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  opacity: 0; transform: translateY(-8px); pointer-events: none;
+  transition: all 0.3s;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* selected panel highlight ring on canvas */
+.canvas-wrap { outline: none; }
+</style>
+</head>
+<body>
+
+<!-- ── STEPPER ── -->
+<nav class="stepper" role="navigation" aria-label="Build stages">
+  <div class="step done" title="Setup complete">
+    <div class="step-icon">✓</div> Setup
+  </div>
+  <div class="step-connector"></div>
+  <div class="step active" title="Currently: Layout">
+    <div class="step-icon">2</div> Layout
+  </div>
+  <div class="step-connector"></div>
+  <div class="step" title="Next: Structure">
+    <div class="step-icon">3</div> Structure
+  </div>
+  <div class="step-connector"></div>
+  <div class="step" title="Upcoming: Materials">
+    <div class="step-icon">4</div> Materials
+  </div>
+  <div class="step-connector"></div>
+  <div class="step" title="Upcoming: Results">
+    <div class="step-icon">5</div> Results
+  </div>
+</nav>
+
+<!-- ── MAIN APP ── -->
+<div class="app">
+
+  <!-- LEFT PANEL -->
+  <aside class="left-panel" aria-label="Panel configuration">
+
+    <!-- Panel type selector -->
+    <div class="panel-section">
+      <div class="section-label">Panel Type</div>
+      <div class="panel-type-row">
+        <div class="panel-type-btn active" id="btn-A" title="Panel A" onclick="selectPanel('A')">A</div>
+        <div class="panel-type-btn" id="btn-B" title="Panel B" onclick="selectPanel('B')">B</div>
+        <div class="panel-type-btn add-btn" title="Add new panel type" onclick="openModal()">+</div>
+      </div>
+    </div>
+
+    <!-- Selected panel info -->
+    <div class="panel-section">
+      <div class="section-label">Selected Panel</div>
+      <div class="panel-card">
+        <div class="panel-card-icon" id="panel-icon">🔲</div>
+        <div class="panel-name" id="panel-name">Panel A</div>
+        <div class="panel-stats">
+          <div class="stat-row"><span class="stat-key">Length</span><span class="stat-val" id="p-length">2.3 m</span></div>
+          <div class="stat-row"><span class="stat-key">Width</span><span class="stat-val" id="p-width">1.2 m</span></div>
+          <div class="stat-row"><span class="stat-key">Weight</span><span class="stat-val" id="p-weight">25 kg</span></div>
+          <div class="stat-row"><span class="stat-key">Watt-peak</span><span class="stat-val" id="p-wp">540 Wp</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel count -->
+    <div class="panel-section">
+      <div class="section-label">Total Panels</div>
+      <div class="count-lock-row">
+        <div>
+          <div class="count-num" id="panel-count">24</div>
+          <div class="count-label">panels fit</div>
+        </div>
+        <div style="flex:1"></div>
+        <div class="lock-btn" id="lock-btn" title="Lock panel count" onclick="toggleLock()">🔓</div>
+      </div>
+    </div>
+
+    <!-- Area used -->
+    <div class="panel-section">
+      <div class="section-label">Footprint</div>
+      <div class="area-display">
+        <div class="area-label">Panels + Alleys</div>
+        <div class="area-val" id="area-val">14.3 × 10.6 m</div>
+        <div class="area-sub" id="area-sub">151.6 m²</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- CANVAS AREA -->
+  <main class="canvas-wrap" aria-label="Layout canvas">
+    <canvas id="solarCanvas" width="430" height="260"></canvas>
+
+    <!-- Dimension bubbles -->
+    <div class="dim-bubble" id="dim-w" title="Canvas width">
+      ↔ <input type="number" id="input-w" value="15" min="5" max="50" step="0.5"> <span class="dim-unit">m</span>
+    </div>
+    <div class="dim-bubble" id="dim-h" title="Canvas height">
+      ↕ <input type="number" id="input-h" value="12" min="5" max="50" step="0.5"> <span class="dim-unit">m</span>
+    </div>
+
+    <!-- Structural pin -->
+    <div class="pin-mark" title="Fixed support point">△</div>
+  </main>
+
+</div>
+
+<!-- ── BOTTOM HUD ── -->
+<div class="hud" role="toolbar" aria-label="Layout parameters">
+
+  <!-- MidClamp Gap -->
+  <div class="hud-var">
+    <div class="hud-var-label">
+      Gap <span class="info-dot" title="Mid-clamp gap between paired panels">i</span>
+    </div>
+    <div class="hud-controls">
+      <div class="hud-btn" onclick="adj('gap',-1)">−</div>
+      <div class="hud-val" id="val-gap">1</div>
+      <div class="hud-unit">in</div>
+      <div class="hud-btn" onclick="adj('gap',1)">+</div>
+    </div>
+    <div class="hud-tooltip">
+      <canvas class="preview-mini" id="tip-gap" width="120" height="80"></canvas>
+      <div class="hud-tooltip-label">Space between two panels at the mid-clamp</div>
+    </div>
+  </div>
+
+  <div class="hud-divider"></div>
+
+  <!-- Alley Reach -->
+  <div class="hud-var" style="min-width:130px;">
+    <div class="hud-var-label" style="color:var(--amber)">
+      Alley Reach <span class="info-dot" style="border-color:var(--amber);color:var(--amber)" title="Max panels from any alley">i</span>
+    </div>
+    <div class="hud-controls">
+      <div class="hud-btn" onclick="adj('reach',-1)">−</div>
+      <div class="hud-val" id="val-reach" style="color:var(--amber)">3</div>
+      <div class="hud-unit">panels</div>
+      <div class="hud-btn" onclick="adj('reach',1)">+</div>
+    </div>
+    <div class="hud-tooltip">
+      <canvas class="preview-mini" id="tip-reach" width="120" height="80"></canvas>
+      <div class="hud-tooltip-label">Max distance from any panel to the nearest alley</div>
+    </div>
+  </div>
+
+  <div class="hud-divider"></div>
+
+  <!-- Alley Width -->
+  <div class="hud-var">
+    <div class="hud-var-label">
+      Alley W <span class="info-dot" title="Maintenance alley width">i</span>
+    </div>
+    <div class="hud-controls">
+      <div class="hud-btn" onclick="adj('alleyW',-1)">−</div>
+      <div class="hud-val" id="val-alleyW">1</div>
+      <div class="hud-unit">m</div>
+      <div class="hud-btn" onclick="adj('alleyW',1)">+</div>
+    </div>
+    <div class="hud-tooltip">
+      <canvas class="preview-mini" id="tip-alleyW" width="120" height="80"></canvas>
+      <div class="hud-tooltip-label">Width of each maintenance walkway between panels</div>
+    </div>
+  </div>
+
+  <div class="hud-divider"></div>
+
+  <!-- Spine edge -->
+  <div class="hud-var" style="min-width:120px;">
+    <div class="hud-var-label">
+      Spine Edge <span class="info-dot" title="Which edge has the access spine alley">i</span>
+    </div>
+    <div class="hud-controls">
+      <div class="hud-btn" id="spine-btn" onclick="toggleSpine()" style="width:auto;padding:0 8px;font-size:11px;font-family:var(--font-game);font-weight:700;">BOTTOM</div>
+    </div>
+    <div class="hud-tooltip">
+      <canvas class="preview-mini" id="tip-spine" width="120" height="80"></canvas>
+      <div class="hud-tooltip-label">The spine alley runs along this edge for direct access</div>
+    </div>
+  </div>
+
+  <div class="hud-divider"></div>
+
+  <!-- Proceed -->
+  <button class="proceed-btn" onclick="proceed()" aria-label="Proceed to Structure step">
+    <div class="proceed-icon">→</div>
+    <div class="proceed-label">NEXT</div>
+  </button>
+
+</div>
+
+<!-- ── MODAL ── -->
+<div class="modal-overlay" id="modal" role="dialog" aria-modal="true" aria-label="Add panel type">
+  <div class="modal">
+    <div class="modal-title">⊕ New Panel Type</div>
+    <div class="modal-field">
+      <div class="modal-label">PANEL NAME</div>
+      <input class="modal-input" type="text" placeholder="e.g. Panel C" id="modal-name">
+    </div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <div class="modal-label">LENGTH (m)</div>
+        <input class="modal-input" type="number" step="0.01" placeholder="2.30" id="modal-len">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">WIDTH (m)</div>
+        <input class="modal-input" type="number" step="0.01" placeholder="1.20" id="modal-wid">
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <div class="modal-label">WEIGHT (kg)</div>
+        <input class="modal-input" type="number" placeholder="25" id="modal-kg">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">WATT-PEAK (Wp)</div>
+        <input class="modal-input" type="number" placeholder="540" id="modal-wp">
+      </div>
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">PANEL COLOR</div>
+      <div class="color-picker-row" id="color-picker">
+        <div class="color-swatch selected" style="background:#E74C3C" data-color="#E74C3C" onclick="pickColor(this)"></div>
+        <div class="color-swatch" style="background:#9B59B6" data-color="#9B59B6" onclick="pickColor(this)"></div>
+        <div class="color-swatch" style="background:#F39C12" data-color="#F39C12" onclick="pickColor(this)"></div>
+        <div class="color-swatch" style="background:#1ABC9C" data-color="#1ABC9C" onclick="pickColor(this)"></div>
+        <div class="color-swatch" style="background:#E91E63" data-color="#E91E63" onclick="pickColor(this)"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn primary" onclick="addPanel()">Add Panel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────
+const state = {
+  canvasW: 15, canvasH: 12,
+  gap: 1, reach: 3, alleyW: 1,
+  spineEdge: 'bottom',
+  locked: false,
+  selectedPanel: 'A',
+  panels: {
+    A: { name:'Panel A', length:2.3, width:1.2, weight:25, wp:540, color:'#3B7DD8', emoji:'🔲' },
+    B: { name:'Panel B', length:2.0, width:1.0, weight:20, wp:450, color:'#3ECF8E', emoji:'🟩' },
+  }
+};
+
+const ALLEY_COLOR    = 'rgba(245,163,35,0.65)';
+const ALLEY_STROKE   = '#F5A623';
+const PANEL_COLORS   = { A:'#3B7DD8', B:'#3ECF8E' };
+const PANEL_STROKES  = { A:'#5BB8F5', B:'#62E8AC' };
+const SPINE_COLOR    = 'rgba(245,163,35,0.4)';
+const SPINE_STROKE   = '#F5A623';
+const GAP_IN_TO_M    = 0.0254;
+
+// ── CANVAS SETUP ─────────────────────────────────────────
+const canvas = document.getElementById('solarCanvas');
+const ctx    = canvas.getContext('2d');
+
+// ── LAYOUT CALC ──────────────────────────────────────────
+function computeLayout() {
+  const p = state.panels[state.selectedPanel];
+  const pW = p.width;   // panel width (columns direction)
+  const pH = p.length;  // panel height (rows direction)
+  const gapM = state.gap * GAP_IN_TO_M;
+  const aW   = state.alleyW;
+  const reach = state.reach;
+  const cW    = state.canvasW;
+  const cH    = state.canvasH;
+
+  // Pair width = 2 * pW + gap
+  const pairW = 2 * pW + gapM;
+
+  // How many pairs fit per group (group = 2*reach panels = reach pairs)
+  // Alley reach is in panels, group = 2*reach panels wide
+  // We use pairs as units: groupPairs = reach (since 1 pair = 2 panels)
+  const groupPairs = Math.ceil(reach / 2);
+
+  // Alley columns: after every groupPairs pairs, insert an alley
+  // First: how many pairs fit total?
+  // Total width = numPairs * pairW + numAlleys * aW + spineAW (spine is along Y, so adds to height)
+  // Iteratively find numPairs
+  let numPairs = Math.floor(cW / pairW);
+  while (numPairs > 0) {
+    const numAlleys = Math.floor((numPairs - 1) / groupPairs);
+    const usedW = numPairs * pairW + numAlleys * aW;
+    if (usedW <= cW) break;
+    numPairs--;
+  }
+  const numPairsVal = Math.max(1, numPairs);
+  const numAlleysX  = Math.floor((numPairsVal - 1) / groupPairs);
+
+  // Rows: spine alley is horizontal (along X), adds to height
+  const spineH = aW;
+  let numRows = Math.floor((cH - spineH) / pH);
+  numRows = Math.max(1, numRows);
+
+  const totalPanels = numPairsVal * 2 * numRows;
+  const usedW = numPairsVal * pairW + numAlleysX * aW;
+  const usedH = numRows * pH + spineH;
+
+  return { pW, pH, gapM, pairW, aW, reach,
+    numPairs: numPairsVal, numAlleys: numAlleysX,
+    numRows, totalPanels, usedW, usedH, spineH, groupPairs };
+}
+
+// ── DRAW ─────────────────────────────────────────────────
+let animFrame = null;
+let _targetLayout = null;
+let _currentScale = 1;
+
+function drawLayout(animPct) {
+  const l = computeLayout();
+  _targetLayout = l;
+
+  const p = state.panels[state.selectedPanel];
+  const MARGIN = 10;
+  const maxW   = canvas.width  - MARGIN * 2;
+  const maxH   = canvas.height - MARGIN * 2;
+  const scaleX = maxW / l.usedW;
+  const scaleY = maxH / l.usedH;
+  const scale  = Math.min(scaleX, scaleY);
+  _currentScale = scale;
+
+  const drawW = l.usedW * scale;
+  const drawH = l.usedH * scale;
+  const ox = (canvas.width  - drawW) / 2;
+  const oy = (canvas.height - drawH) / 2;
+
+  const pColor = PANEL_COLORS[state.selectedPanel] || p.color || '#3B7DD8';
+  const sColor = PANEL_STROKES[state.selectedPanel] || '#5BB8F5';
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Canvas background
+  ctx.fillStyle = '#111827';
+  ctx.beginPath();
+  ctx.roundRect(ox - 4, oy - 4, drawW + 8, drawH + 8, 6);
+  ctx.fill();
+
+  // Grid ghost lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for (let gx = ox; gx < ox + drawW; gx += 20) {
+    ctx.beginPath(); ctx.moveTo(gx, oy); ctx.lineTo(gx, oy + drawH); ctx.stroke();
+  }
+  for (let gy = oy; gy < oy + drawH; gy += 20) {
+    ctx.beginPath(); ctx.moveTo(ox, gy); ctx.lineTo(ox + drawW, gy); ctx.stroke();
+  }
+
+  // Spine alley (horizontal, full width)
+  const spineY = state.spineEdge === 'top'
+    ? oy
+    : oy + drawH - l.spineH * scale;
+  const panelAreaY = state.spineEdge === 'top'
+    ? oy + l.spineH * scale
+    : oy;
+
+  ctx.fillStyle = ALLEY_COLOR;
+  ctx.strokeStyle = ALLEY_STROKE;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(ox, spineY, drawW, l.spineH * scale, 3);
+  ctx.fill(); ctx.stroke();
+
+  // Spine label
+  ctx.save();
+  ctx.font = `bold ${Math.max(8, 9 * (scale/25))}px Rajdhani`;
+  ctx.fillStyle = 'rgba(245,163,35,0.9)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SPINE ALLEY — EDGE ACCESS', ox + drawW / 2, spineY + (l.spineH * scale) / 2);
+  ctx.restore();
+
+  // Draw pairs and vertical alleys
+  const groupPairs = l.groupPairs;
+  let cx = ox;
+  for (let pi = 0; pi < l.numPairs; pi++) {
+    // Insert vertical alley before this pair (except first)?
+    if (pi > 0 && pi % groupPairs === 0) {
+      // Draw alley
+      ctx.fillStyle = ALLEY_COLOR;
+      ctx.strokeStyle = ALLEY_STROKE;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(cx, panelAreaY, l.aW * scale, l.numRows * l.pH * scale, 3);
+      ctx.fill(); ctx.stroke();
+
+      // Alley label (rotated)
+      const alleyIdx = Math.floor(pi / groupPairs);
+      ctx.save();
+      ctx.translate(cx + (l.aW * scale) / 2, panelAreaY + (l.numRows * l.pH * scale) / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.font = `700 ${Math.max(7, 8 * (scale/25))}px Rajdhani`;
+      ctx.fillStyle = 'rgba(245,163,35,0.85)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('A' + alleyIdx, 0, 0);
+      ctx.restore();
+
+      cx += l.aW * scale;
+    }
+
+    // Draw rows for this pair
+    for (let ri = 0; ri < l.numRows; ri++) {
+      const py = panelAreaY + ri * l.pH * scale;
+      const pw = l.pW * scale;
+      const ph = l.pH * scale;
+
+      // Left panel
+      ctx.fillStyle = pColor;
+      ctx.strokeStyle = sColor;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.roundRect(cx, py, pw, ph, 2);
+      ctx.fill(); ctx.stroke();
+      // Cell line
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(cx + 1, py + ph/2); ctx.lineTo(cx + pw - 1, py + ph/2);
+      ctx.stroke();
+
+      // Gap
+      const gw = l.gapM * scale;
+      if (gw > 0.5) {
+        ctx.fillStyle = 'rgba(255,193,7,0.3)';
+        ctx.fillRect(cx + pw, py, Math.max(gw, 1), ph);
+      }
+
+      // Right panel
+      ctx.fillStyle = pColor;
+      ctx.strokeStyle = sColor;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.roundRect(cx + pw + gw, py, pw, ph, 2);
+      ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(cx + pw + gw + 1, py + ph/2); ctx.lineTo(cx + pw + gw + pw - 1, py + ph/2);
+      ctx.stroke();
+    }
+    cx += l.pairW * scale;
+  }
+
+  // Border glow
+  ctx.strokeStyle = 'rgba(91,184,245,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(ox - 4, oy - 4, drawW + 8, drawH + 8);
+
+  // Update UI stats
+  document.getElementById('panel-count').textContent = l.totalPanels;
+  document.getElementById('area-val').textContent =
+    l.usedW.toFixed(1) + ' × ' + l.usedH.toFixed(1) + ' m';
+  document.getElementById('area-sub').textContent =
+    (l.usedW * l.usedH).toFixed(1) + ' m²';
+}
+
+// ── TOOLTIP PREVIEW CANVASES ─────────────────────────────
+function drawTipGap(canvasEl) {
+  const c = canvasEl; const x = c.getContext('2d');
+  c.width = 120; c.height = 80;
+  x.fillStyle = '#1E2640'; x.fillRect(0,0,120,80);
+  // Two panels with gap
+  x.fillStyle = '#3B7DD8'; x.fillRect(10, 15, 40, 50);
+  x.fillStyle = '#3B7DD8'; x.fillRect(70, 15, 40, 50);
+  const gapPx = Math.max(2, state.gap * 6);
+  x.fillStyle = 'rgba(255,193,7,0.8)';
+  x.fillRect(50, 15, gapPx, 50);
+  // Arrow
+  x.strokeStyle = '#F5A623'; x.lineWidth = 1.5;
+  x.beginPath(); x.moveTo(50, 8); x.lineTo(50 + gapPx, 8); x.stroke();
+  x.fillStyle = '#F5A623'; x.font = '9px Inter'; x.textAlign = 'center';
+  x.fillText(state.gap + '"', 50 + gapPx/2, 7);
+}
+
+function drawTipReach(canvasEl) {
+  const c = canvasEl; const x = c.getContext('2d');
+  c.width = 120; c.height = 80;
+  x.fillStyle = '#1E2640'; x.fillRect(0,0,120,80);
+  const r = state.reach; const pw = 10; const aw = 8;
+  const totalPanels = r * 2;
+  const totalW = totalPanels * pw + aw;
+  const startX = (120 - totalW) / 2;
+  // coverage zone
+  x.fillStyle = 'rgba(91,184,245,0.12)';
+  x.fillRect(startX, 10, totalW, 60);
+  // panels
+  for (let i = 0; i < totalPanels; i++) {
+    const px = startX + i * pw + (i >= r ? aw : 0);
+    x.fillStyle = i < r ? 'rgba(59,125,216,0.9)' : 'rgba(59,125,216,0.5)';
+    x.fillRect(px + 1, 15, pw - 2, 50);
+  }
+  // alley
+  x.fillStyle = ALLEY_COLOR;
+  x.fillRect(startX + r * pw, 15, aw, 50);
+  // reach arrows
+  x.strokeStyle = '#5BB8F5'; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(startX, 8); x.lineTo(startX + r*pw, 8); x.stroke();
+  x.fillStyle = '#5BB8F5'; x.font = '8px Inter'; x.textAlign = 'center';
+  x.fillText('≤'+r, startX + r*pw/2, 7);
+}
+
+function drawTipAlleyW(canvasEl) {
+  const c = canvasEl; const x = c.getContext('2d');
+  c.width = 120; c.height = 80;
+  x.fillStyle = '#1E2640'; x.fillRect(0,0,120,80);
+  x.fillStyle = '#3B7DD8'; x.fillRect(10, 15, 35, 50);
+  x.fillStyle = '#3B7DD8'; x.fillRect(75, 15, 35, 50);
+  const aw = Math.max(6, state.alleyW * 20);
+  x.fillStyle = ALLEY_COLOR;
+  x.fillRect(45, 15, aw, 50);
+  x.strokeStyle = ALLEY_STROKE; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(45, 8); x.lineTo(45+aw, 8); x.stroke();
+  x.fillStyle = '#F5A623'; x.font = '9px Inter'; x.textAlign = 'center';
+  x.fillText(state.alleyW+'m', 45+aw/2, 7);
+}
+
+function drawTipSpine(canvasEl) {
+  const c = canvasEl; const x = c.getContext('2d');
+  c.width = 120; c.height = 80;
+  x.fillStyle = '#1E2640'; x.fillRect(0,0,120,80);
+  const sy = state.spineEdge === 'top' ? 10 : 68;
+  // panels
+  x.fillStyle = '#3B7DD8';
+  x.fillRect(10, 20, 30, 35); x.fillRect(45, 20, 30, 35); x.fillRect(80, 20, 30, 35);
+  // spine
+  x.fillStyle = ALLEY_COLOR; x.fillRect(10, sy, 100, 8);
+  x.strokeStyle = ALLEY_STROKE; x.lineWidth = 1; x.strokeRect(10, sy, 100, 8);
+  x.fillStyle = '#F5A623'; x.font = '7px Inter'; x.textAlign = 'center';
+  x.fillText('SPINE', 60, sy + 6);
+}
+
+function drawAllTips() {
+  drawTipGap(document.getElementById('tip-gap'));
+  drawTipReach(document.getElementById('tip-reach'));
+  drawTipAlleyW(document.getElementById('tip-alleyW'));
+  drawTipSpine(document.getElementById('tip-spine'));
+}
+
+// ── CONTROLS ─────────────────────────────────────────────
+const limits = { gap:[1,4], reach:[2,4], alleyW:[1,3] };
+
+function adj(key, delta) {
+  const [lo, hi] = limits[key];
+  state[key] = Math.max(lo, Math.min(hi, state[key] + delta));
+  document.getElementById('val-' + key).textContent = state[key];
+  drawAllTips();
+  schedDraw();
+}
+
+function toggleSpine() {
+  state.spineEdge = state.spineEdge === 'bottom' ? 'top' : 'bottom';
+  document.getElementById('spine-btn').textContent = state.spineEdge.toUpperCase();
+  drawAllTips();
+  schedDraw();
+}
+
+function toggleLock() {
+  state.locked = !state.locked;
+  const btn = document.getElementById('lock-btn');
+  btn.textContent = state.locked ? '🔒' : '🔓';
+  btn.classList.toggle('locked', state.locked);
+  showToast(state.locked ? 'Panel count locked' : 'Panel count unlocked');
+}
+
+function selectPanel(key) {
+  state.selectedPanel = key;
+  document.querySelectorAll('.panel-type-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + key)?.classList.add('active');
+  const p = state.panels[key];
+  if (p) {
+    document.getElementById('panel-name').textContent = p.name;
+    document.getElementById('p-length').textContent = p.length + ' m';
+    document.getElementById('p-width').textContent  = p.width  + ' m';
+    document.getElementById('p-weight').textContent = p.weight + ' kg';
+    document.getElementById('p-wp').textContent     = p.wp     + ' Wp';
+    document.getElementById('panel-icon').textContent = p.emoji || '🔲';
+    PANEL_COLORS[key] = p.color;
+    PANEL_STROKES[key] = lighten(p.color);
+  }
+  schedDraw();
+}
+
+function lighten(hex) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgb(${Math.min(255,r+60)},${Math.min(255,g+60)},${Math.min(255,b+60)})`;
+}
+
+// ── DIMENSION INPUTS ─────────────────────────────────────
+document.getElementById('input-w').addEventListener('input', e => {
+  state.canvasW = parseFloat(e.target.value) || 15;
+  schedDraw();
+});
+document.getElementById('input-h').addEventListener('input', e => {
+  state.canvasH = parseFloat(e.target.value) || 12;
+  schedDraw();
+});
+
+// ── ANIMATED REDRAW ──────────────────────────────────────
+let drawTimer = null;
+function schedDraw() {
+  clearTimeout(drawTimer);
+  drawTimer = setTimeout(() => drawLayout(), 30);
+}
+
+// ── MODAL ────────────────────────────────────────────────
+let selectedColor = '#E74C3C';
+const PANEL_KEYS = ['A','B','C','D','E','F','G','H'];
+
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+function pickColor(el) {
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedColor = el.dataset.color;
+}
+function addPanel() {
+  const name = document.getElementById('modal-name').value || 'Panel C';
+  const len  = parseFloat(document.getElementById('modal-len').value)  || 2.0;
+  const wid  = parseFloat(document.getElementById('modal-wid').value)  || 1.0;
+  const kg   = parseFloat(document.getElementById('modal-kg').value)   || 20;
+  const wp   = parseFloat(document.getElementById('modal-wp').value)   || 400;
+
+  // Find next available key
+  const used = Object.keys(state.panels);
+  const key  = PANEL_KEYS.find(k => !used.includes(k)) || 'Z';
+
+  state.panels[key] = { name, length: len, width: wid, weight: kg, wp, color: selectedColor, emoji: '🟥' };
+  PANEL_COLORS[key]  = selectedColor;
+  PANEL_STROKES[key] = lighten(selectedColor);
+
+  // Add button
+  const row = document.querySelector('.panel-type-row');
+  const addBtn = document.querySelector('.add-btn');
+  const btn = document.createElement('div');
+  btn.className = 'panel-type-btn';
+  btn.id = 'btn-' + key;
+  btn.title = name;
+  btn.textContent = key;
+  btn.style.background = selectedColor + '33';
+  btn.style.borderColor = selectedColor + '99';
+  btn.style.color = selectedColor;
+  btn.onclick = () => selectPanel(key);
+  row.insertBefore(btn, addBtn);
+
+  closeModal();
+  selectPanel(key);
+  showToast(name + ' added!');
+}
+
+// ── TOAST ────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── PROCEED ──────────────────────────────────────────────
+function proceed() {
+  // Animate stepper: mark step 2 done, activate step 3
+  const steps = document.querySelectorAll('.step');
+  steps[1].classList.remove('active'); steps[1].classList.add('done');
+  steps[1].querySelector('.step-icon').textContent = '✓';
+  steps[2].classList.add('active');
+  showToast('Moving to Structure →');
+}
+
+// ── RESIZE CANVAS TO FIT ─────────────────────────────────
+function resizeCanvas() {
+  const wrap = document.querySelector('.canvas-wrap');
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  canvas.width  = Math.max(300, w - 80);
+  canvas.height = Math.max(200, h - 80);
+  drawLayout();
+}
+
+// ── INIT ─────────────────────────────────────────────────
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+drawAllTips();
+
+// Small kick to draw tips after fonts load
+setTimeout(drawAllTips, 500);
+</script>
+</body>
+</html>

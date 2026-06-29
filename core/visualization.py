@@ -27,6 +27,16 @@ OBSTACLE_FILL = "rgba(231, 76, 60, 0.25)"
 OBSTACLE_LINE = "#c0392b"
 COLUMN_ACTIVE_COLOR = "#2c3e50"
 COLUMN_EXCLUDED_COLOR = "#e74c3c"
+
+# SolarForge dark canvas palette
+DARK_PANEL_FILL = "rgba(59, 125, 216, 0.88)"
+DARK_PANEL_LINE = "#5BB8F5"
+DARK_ALLEY_FILL = "rgba(245, 163, 35, 0.55)"
+DARK_ALLEY_LINE = "#F5A623"
+DARK_SPINE_FILL = "rgba(245, 163, 35, 0.40)"
+DARK_SPINE_LINE = "#F5A623"
+DARK_BBOX_LINE = "rgba(91, 184, 245, 0.45)"
+DARK_MAX_AREA_LINE = "rgba(122, 132, 153, 0.55)"
 AXIS_PADDING_M = 0.25
 FIGURE_WIDTH = 900
 FIGURE_HEIGHT = 700
@@ -122,8 +132,20 @@ def _add_tributary_zone(
     )
 
 
-def _apply_figure_axes(fig: go.Figure, x_max: float, y_max: float) -> None:
-    x_upper, y_upper = _non_negative_axis_limits(x_max, y_max)
+def _apply_figure_axes(
+    fig: go.Figure,
+    x_max: float,
+    y_max: float,
+    *,
+    dark_theme: bool = False,
+    fig_width: int = FIGURE_WIDTH,
+    fig_height: int = FIGURE_HEIGHT,
+) -> None:
+    x_upper, y_upper = _non_negative_axis_limits(
+        x_max, y_max, fig_width=fig_width, fig_height=fig_height
+    )
+    grid_color = "rgba(255,255,255,0.04)" if dark_theme else "#eee"
+    line_color = "rgba(255,255,255,0.12)" if dark_theme else "#333"
     fig.update_xaxes(
         title_text="X (m)",
         scaleanchor="y",
@@ -134,7 +156,9 @@ def _apply_figure_axes(fig: go.Figure, x_max: float, y_max: float) -> None:
         zeroline=True,
         showline=True,
         linewidth=1,
-        linecolor="#333",
+        linecolor=line_color,
+        gridcolor=grid_color,
+        showgrid=dark_theme,
     )
     fig.update_yaxes(
         title_text="Y (m)",
@@ -144,14 +168,35 @@ def _apply_figure_axes(fig: go.Figure, x_max: float, y_max: float) -> None:
         zeroline=True,
         showline=True,
         linewidth=1,
-        linecolor="#333",
+        linecolor=line_color,
+        gridcolor=grid_color,
+        showgrid=dark_theme,
     )
-    fig.update_layout(
-        template="plotly_white",
-        width=FIGURE_WIDTH,
-        height=FIGURE_HEIGHT,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
-    )
+    if dark_theme:
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            autosize=True,
+            height=fig_height,
+            showlegend=False,
+            title_text="",
+            font=dict(color="#E8EAF0", family="Inter, sans-serif"),
+            margin=dict(l=24, r=24, t=24, b=24),
+        )
+        fig.update_xaxes(
+            visible=False, showgrid=False, zeroline=False, showticklabels=False, title_text=""
+        )
+        fig.update_yaxes(
+            visible=False, showgrid=False, zeroline=False, showticklabels=False, title_text=""
+        )
+    else:
+        fig.update_layout(
+            template="plotly_white",
+            width=fig_width,
+            height=fig_height,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+        )
 
 
 def _add_rect(
@@ -201,11 +246,22 @@ def build_layout_figure(
     tributary_columns: list[Column] | None = None,
     obstacle_zones: list[Rect] | None = None,
     title: str = "Panel layout",
+    dark_theme: bool = False,
+    figure_height: int = FIGURE_HEIGHT,
 ) -> go.Figure:
     """Build a Plotly figure with panels, alleys, optional tributary overlay, and bbox."""
     panels = accumulate_grid(panel, config, num_pairs_per_row, num_rows)
     alleys = collect_alley_rects(panel, config, num_pairs_per_row, num_rows)
     bbox = grid_bbox(panels + alleys)
+
+    panel_fill = DARK_PANEL_FILL if dark_theme else PANEL_FILL
+    panel_line = DARK_PANEL_LINE if dark_theme else PANEL_LINE
+    alley_fill = DARK_ALLEY_FILL if dark_theme else ALLEY_FILL
+    alley_line = DARK_ALLEY_LINE if dark_theme else ALLEY_LINE
+    spine_fill = DARK_SPINE_FILL if dark_theme else SPINE_FILL
+    spine_line = DARK_SPINE_LINE if dark_theme else SPINE_LINE
+    bbox_line = DARK_BBOX_LINE if dark_theme else BBOX_LINE
+    max_area_line = DARK_MAX_AREA_LINE if dark_theme else MAX_AREA_LINE
 
     fig = go.Figure()
 
@@ -213,8 +269,8 @@ def build_layout_figure(
         _add_rect(
             fig,
             rect,
-            fillcolor=PANEL_FILL,
-            line_color=PANEL_LINE,
+            fillcolor=panel_fill,
+            line_color=panel_line,
             legend_group="panels",
             showlegend=index == 0,
             name="Panel",
@@ -222,6 +278,7 @@ def build_layout_figure(
 
     spine_legend_shown = False
     parallel_legend_shown = False
+    parallel_alley_index = 0
     for rect in alleys:
         is_spine = rect[1] == 0.0 and rect[3] <= config.alley_width + 1e-9
         if is_spine:
@@ -233,12 +290,35 @@ def build_layout_figure(
         _add_rect(
             fig,
             rect,
-            fillcolor=SPINE_FILL if is_spine else ALLEY_FILL,
-            line_color=SPINE_LINE if is_spine else ALLEY_LINE,
+            fillcolor=spine_fill if is_spine else alley_fill,
+            line_color=spine_line if is_spine else alley_line,
             legend_group="spine" if is_spine else "alleys",
             showlegend=showlegend,
             name="Edge spine" if is_spine else "Parallel alley",
         )
+        if dark_theme:
+            x, y, w, h = rect
+            cx, cy = x + w / 2, y + h / 2
+            if is_spine:
+                fig.add_annotation(
+                    x=cx,
+                    y=cy,
+                    text="SPINE ALLEY — EDGE ACCESS",
+                    showarrow=False,
+                    font=dict(size=10, color="#F5A623", family="Rajdhani"),
+                    bgcolor="rgba(0,0,0,0)",
+                )
+            else:
+                parallel_alley_index += 1
+                fig.add_annotation(
+                    x=cx,
+                    y=cy,
+                    text=f"A{parallel_alley_index}",
+                    showarrow=False,
+                    textangle=-90,
+                    font=dict(size=9, color="#F5A623", family="Rajdhani"),
+                    bgcolor="rgba(0,0,0,0)",
+                )
 
     if tributary_columns:
         loads = [
@@ -321,7 +401,7 @@ def build_layout_figure(
             fig,
             bbox,
             fillcolor="rgba(0,0,0,0)",
-            line_color=BBOX_LINE,
+            line_color=bbox_line,
             line_width=2,
             line_dash="dash",
             legend_group="bbox",
@@ -335,7 +415,7 @@ def build_layout_figure(
             fig,
             max_rect,
             fillcolor="rgba(0,0,0,0)",
-            line_color=MAX_AREA_LINE,
+            line_color=max_area_line,
             line_width=2,
             line_dash="dot",
             legend_group="max_area",
@@ -348,8 +428,17 @@ def build_layout_figure(
         x_max = bx + bw
         y_max = by + bh
 
-    _apply_figure_axes(fig, x_max, y_max)
-    fig.update_layout(title=title)
+    _apply_figure_axes(
+        fig,
+        x_max,
+        y_max,
+        dark_theme=dark_theme,
+        fig_height=figure_height,
+    )
+    if title:
+        fig.update_layout(title=title)
+    elif dark_theme:
+        fig.update_layout(title_text="")
     return fig
 
 

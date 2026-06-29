@@ -28,6 +28,7 @@ PERSIST_DEFAULTS: dict[str, object] = {
     "persist_alley_reach": 2,
     "persist_max_x": 12.0,
     "persist_max_y": 8.0,
+    "persist_spine_edge": "bottom",
     "persist_use_fit": True,
     "persist_num_pairs": 3,
     "persist_num_rows": 2,
