@@ -1,0 +1,115 @@
+/* Overrides for API-driven setup (dim pills positioned by JS) */
+:root {
+  --hud-reserve: 118px;
+}
+
+.app {
+  padding-bottom: var(--hud-reserve) !important;
+  box-sizing: border-box;
+}
+
+.canvas-wrap {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+#dim-w, #dim-h {
+  top: auto;
+  left: auto;
+  right: auto;
+  transform: none;
+  z-index: 20;
+  pointer-events: all;
+}
+
+#solarCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  transform: none;
+  top: 0;
+  left: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.count-lock-row {
+  align-items: center;
+}
+
+.count-value-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.count-num-input {
+  font-family: var(--font-game);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--amber);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border2);
+  width: 3.5rem;
+  padding: 0;
+  line-height: 1.1;
+  margin-bottom: 2px;
+  -moz-appearance: textfield;
+}
+
+.count-num-input::-webkit-outer-spin-button,
+.count-num-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.count-num-input:focus {
+  outline: none;
+  border-bottom-color: var(--amber);
+}
+
+.lock-btn {
+  border: none;
+  font: inherit;
+}
+
+.hud-btn {
+  font: inherit;
+}
+
+.proceed-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  animation: none;
+}
+
+.layout-warning {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(22, 27, 39, 0.92);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  z-index: 15;
+  max-width: 320px;
+  text-align: center;
+  display: none;
+}
+
+.layout-warning.visible {
+  display: block;
+}
+
+.color-swatch {
+  padding: 0;
+  font: inherit;
+}

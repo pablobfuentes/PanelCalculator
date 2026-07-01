@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SolarForge — Setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/setup.css">
+  <link rel="stylesheet" href="/static/css/setup-extras.css">
+</head>
+<body>
+
+<nav class="stepper" role="navigation" aria-label="Build stages">
+  <div class="step active"><div class="step-icon">1</div> Setup</div>
+  <div class="step-connector"></div>
+  <div class="step"><div class="step-icon">2</div> Layout</div>
+  <div class="step-connector"></div>
+  <div class="step"><div class="step-icon">3</div> Structure</div>
+  <div class="step-connector"></div>
+  <div class="step"><div class="step-icon">4</div> Results</div>
+</nav>
+
+<div class="app">
+  <aside class="left-panel" aria-label="Panel settings">
+    <div class="panel-section">
+      <div class="section-label">Panel type</div>
+      <div class="panel-type-row" id="panel-type-row"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Selected panel</div>
+      <div class="panel-card">
+        <div class="panel-card-icon" id="panel-icon">☀</div>
+        <div class="panel-name" id="panel-name">Panel A</div>
+        <div class="panel-stats">
+          <div class="stat-row"><span class="stat-key">Length</span><span class="stat-val" id="p-length">—</span></div>
+          <div class="stat-row"><span class="stat-key">Width</span><span class="stat-val" id="p-width">—</span></div>
+          <div class="stat-row"><span class="stat-key">Weight</span><span class="stat-val" id="p-weight">—</span></div>
+          <div class="stat-row"><span class="stat-key">Watt-peak</span><span class="stat-val" id="p-wp">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Total panels</div>
+      <div class="count-lock-row">
+        <div class="count-value-wrap">
+          <div class="count-num" id="panel-count">—</div>
+          <input type="number" id="panel-count-input" class="count-num-input" min="2" step="1" hidden aria-label="Locked panel count">
+          <div class="count-label" id="count-label">panels fit</div>
+        </div>
+        <div style="flex:1"></div>
+        <button type="button" class="lock-btn" id="lock-btn" title="Lock panel count">🔓</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Footprint</div>
+      <div class="area-display">
+        <div class="area-label">Panels + alleys</div>
+        <div class="area-val" id="area-val">—</div>
+        <div class="area-sub" id="area-sub">—</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="canvas-wrap" aria-label="Layout canvas">
+    <canvas id="solarCanvas" width="800" height="520"></canvas>
+    <div class="dim-bubble" id="dim-w" title="Max area width">
+      ↔ <input type="number" id="input-w" value="12" min="1" max="80" step="0.5"> <span class="dim-unit">m</span>
+    </div>
+    <div class="dim-bubble" id="dim-h" title="Max area height">
+      ↕ <input type="number" id="input-h" value="8" min="1" max="80" step="0.5"> <span class="dim-unit">m</span>
+    </div>
+  </main>
+</div>
+
+<div class="hud" role="toolbar" aria-label="Layout parameters">
+  <div class="hud-var">
+    <div class="hud-var-label">Gap <span class="info-dot">i</span></div>
+    <div class="hud-controls">
+      <button type="button" class="hud-btn" data-adj="gap" data-delta="-1">−</button>
+      <div class="hud-val" id="val-gap">1</div>
+      <div class="hud-unit">in</div>
+      <button type="button" class="hud-btn" data-adj="gap" data-delta="1">+</button>
+    </div>
+    <div class="hud-tooltip">
+      <canvas class="preview-mini" id="tip-gap" width="120" height="80"></canvas>
+      <div class="hud-tooltip-label">Space between two panels at the mid-clamp</div>
+    </div>
+  </div>
+  <div class="hud-divider"></div>
+  <div class="hud-var" style="min-width:130px;">
+    <div class="hud-var-label" style="color:var(--amber)">Alley reach <span class="info-dot">i</span></div>
+    <div class="hud-controls">
+      <button type="button" class="hud-btn" data-adj="reach" data-delta="-1">−</button>
+      <div class="hud-val" id="val-reach" style="color:var(--amber)">2</div>
+      <div class="hud-unit">panels</div>
+      <button type="button" class="hud-btn" data-adj="reach" data-delta="1">+</button>
+    </div>
+    <div class="hud-tooltip">
+      <canvas class="preview-mini" id="tip-reach" width="120" height="80"></canvas>
+      <div class="hud-tooltip-label">Max distance from any panel to the nearest alley</div>
+    </div>
+  </div>
+  <div class="hud-divider"></div>
+  <div class="hud-var">
+    <div class="hud-var-label">Alley W <span class="info-dot">i</span></div>
+    <div class="hud-controls">
+      <button type="button" class="hud-btn" data-adj="alleyW" data-delta="-1">−</button>
+      <div class="hud-val" id="val-alleyW">1</div>
+      <div class="hud-unit">m</div>
+      <button type="button" class="hud-btn" data-adj="alleyW" data-delta="1">+</button>
+    </div>
+    <div class="hud-tooltip">
+      <canvas class="preview-mini" id="tip-alleyW" width="120" height="80"></canvas>
+      <div class="hud-tooltip-label">Width of each maintenance walkway between panels</div>
+    </div>
+  </div>
+  <div class="hud-divider"></div>
+  <div class="hud-var" style="min-width:120px;">
+    <div class="hud-var-label">Spine edge <span class="info-dot">i</span></div>
+    <div class="hud-controls">
+      <button type="button" class="hud-btn" id="spine-btn" style="width:auto;padding:0 8px;font-size:11px;font-family:var(--font-game);font-weight:700;">BOTTOM</button>
+    </div>
+    <div class="hud-tooltip">
+      <canvas class="preview-mini" id="tip-spine" width="120" height="80"></canvas>
+      <div class="hud-tooltip-label">The spine alley runs along this edge</div>
+    </div>
+  </div>
+  <div class="hud-divider"></div>
+  <button type="button" class="proceed-btn" id="proceed-btn" aria-label="Proceed to Structure step">
+    <div class="proceed-icon">→</div>
+    <div class="proceed-label">NEXT</div>
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="modal" role="dialog" aria-modal="true" aria-label="Add panel type">
+  <div class="modal">
+    <div class="modal-title">⊕ New Panel Type</div>
+    <div class="modal-field">
+      <div class="modal-label">Panel name</div>
+      <input class="modal-input" type="text" placeholder="e.g. Panel C" id="modal-name">
+    </div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <div class="modal-label">Length (m)</div>
+        <input class="modal-input" type="number" step="0.01" placeholder="2.30" id="modal-len">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Width (m)</div>
+        <input class="modal-input" type="number" step="0.01" placeholder="1.20" id="modal-wid">
+      </div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-field">
+        <div class="modal-label">Weight (kg)</div>
+        <input class="modal-input" type="number" placeholder="25" id="modal-kg">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Watt-peak (Wp)</div>
+        <input class="modal-input" type="number" placeholder="540" id="modal-wp">
+      </div>
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">Panel color</div>
+      <div class="color-picker-row" id="color-picker">
+        <button type="button" class="color-swatch selected" style="background:#E74C3C" data-color="#E74C3C"></button>
+        <button type="button" class="color-swatch" style="background:#9B59B6" data-color="#9B59B6"></button>
+        <button type="button" class="color-swatch" style="background:#F39C12" data-color="#F39C12"></button>
+        <button type="button" class="color-swatch" style="background:#1ABC9C" data-color="#1ABC9C"></button>
+        <button type="button" class="color-swatch" style="background:#E91E63" data-color="#E91E63"></button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn secondary" id="modal-cancel">Cancel</button>
+      <button type="button" class="modal-btn primary" id="modal-add">Add Panel</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/static/js/setup.js"></script>
+</body>
+</html>

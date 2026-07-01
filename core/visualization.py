@@ -12,6 +12,7 @@ from core.layout import (
     collect_alley_rects,
     grid_bbox,
 )
+from core.layout_checks import LayoutElement
 from core.models import LayoutConfig, PanelSpec
 from core.tributary import Column
 
@@ -27,6 +28,16 @@ OBSTACLE_FILL = "rgba(231, 76, 60, 0.25)"
 OBSTACLE_LINE = "#c0392b"
 COLUMN_ACTIVE_COLOR = "#2c3e50"
 COLUMN_EXCLUDED_COLOR = "#e74c3c"
+COLUMN_MARKER_BORDER = "#F5A623"
+COLUMN_MARKER_BORDER_WIDTH = 2
+COLUMN_MARKER_OUTLINE = "#FFFFFF"
+COLUMN_MARKER_OUTLINE_WIDTH = 2.5
+COLUMN_MARKER_SIZE = 16
+PRELIMINARY_PASS_COLOR = "#2ecc71"
+PRELIMINARY_WARN_COLOR = "#f39c12"
+PRELIMINARY_FAIL_COLOR = "#e74c3c"
+BEAM_LINE_WIDTH = 4
+BEAM_HIT_MARKER_SIZE = 22
 
 # SolarForge dark canvas palette
 DARK_PANEL_FILL = "rgba(59, 125, 216, 0.88)"
@@ -74,6 +85,76 @@ def _non_negative_axis_limits(
     elif data_aspect > plot_aspect:
         y_upper = x_upper / plot_aspect
     return x_upper, y_upper
+
+
+def max_area_pill_percents(
+    max_area_x: float,
+    max_area_y: float,
+    axis_x_max: float,
+    axis_y_max: float,
+    *,
+    fig_width: float,
+    fig_height: float,
+    margin_l: float = 24,
+    margin_r: float = 24,
+    margin_t: float = 24,
+    margin_b: float = 24,
+    pill_gap_px: float = 10,
+) -> dict[str, float]:
+    """
+    Percent positions (0–100) within the Plotly chart box for ↔ / ↕ pills.
+
+    Pills sit just outside the dotted max-area rectangle: width pill centered
+    on its top edge, height pill centered on its right edge.
+    """
+    x_upper, y_upper = _non_negative_axis_limits(
+        axis_x_max, axis_y_max, fig_width=int(fig_width), fig_height=int(fig_height)
+    )
+    inner_w = max(fig_width - margin_l - margin_r, 1)
+    inner_h = max(fig_height - margin_t - margin_b, 1)
+    plot_aspect = inner_w / inner_h
+    data_aspect = x_upper / y_upper if y_upper > 0 else 1.0
+
+    if data_aspect > plot_aspect:
+        used_w = inner_w
+        used_h = inner_w / data_aspect
+        pad_x = 0.0
+        pad_y = (inner_h - used_h) / 2
+    else:
+        used_h = inner_h
+        used_w = inner_h * data_aspect
+        pad_x = (inner_w - used_w) / 2
+        pad_y = 0.0
+
+    max_x_frac = max_area_x / x_upper if x_upper > 0 else 1.0
+    max_y_frac = max_area_y / y_upper if y_upper > 0 else 1.0
+
+    origin_x = margin_l + pad_x
+    origin_y = margin_t + pad_y
+
+    # Anchor on top edge (center) and right edge (center); gap keeps pill outside dotted line.
+    w_left = origin_x + max_x_frac * used_w / 2
+    w_top = origin_y + (1.0 - max_y_frac) * used_h - pill_gap_px
+
+    h_left = origin_x + max_x_frac * used_w + pill_gap_px
+    h_top = origin_y + (1.0 - max_y_frac / 2) * used_h
+
+    return {
+        "w_left": max(0.0, min(100.0, 100 * w_left / fig_width)),
+        "w_top": max(0.0, min(100.0, 100 * w_top / fig_height)),
+        "h_left": max(0.0, min(100.0, 100 * h_left / fig_width)),
+        "h_top": max(0.0, min(100.0, 100 * h_top / fig_height)),
+    }
+
+
+def figure_axis_max_for_max_area(
+    max_area_x: float,
+    max_area_y: float,
+    layout_bbox: tuple[float, float, float, float],
+) -> tuple[float, float]:
+    """Match build_layout_figure axis extents when show_max_area is True."""
+    _, _, bw, bh = layout_bbox
+    return max(bw, max_area_x), max(bh, max_area_y)
 
 
 def _load_intensity_color(t: float, *, alpha: float = 0.42) -> str:
@@ -138,14 +219,15 @@ def _apply_figure_axes(
     y_max: float,
     *,
     dark_theme: bool = False,
+    game_canvas: bool = False,
     fig_width: int = FIGURE_WIDTH,
     fig_height: int = FIGURE_HEIGHT,
 ) -> None:
     x_upper, y_upper = _non_negative_axis_limits(
         x_max, y_max, fig_width=fig_width, fig_height=fig_height
     )
-    grid_color = "rgba(255,255,255,0.04)" if dark_theme else "#eee"
-    line_color = "rgba(255,255,255,0.12)" if dark_theme else "#333"
+    grid_color = "rgba(255,255,255,0.04)" if dark_theme else "rgba(15,23,42,0.06)"
+    line_color = "rgba(255,255,255,0.12)" if dark_theme else "rgba(15,23,42,0.18)"
     fig.update_xaxes(
         title_text="X (m)",
         scaleanchor="y",
@@ -172,17 +254,21 @@ def _apply_figure_axes(
         gridcolor=grid_color,
         showgrid=dark_theme,
     )
-    if dark_theme:
+    if dark_theme or game_canvas:
+        font_color = "#E8EAF0" if dark_theme else "#1A1F2E"
+        plot_margin = (
+            dict(l=24, r=52, t=42, b=24) if game_canvas else dict(l=24, r=24, t=24, b=24)
+        )
         fig.update_layout(
-            template="plotly_dark",
+            template="plotly_dark" if dark_theme else "plotly_white",
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             autosize=True,
             height=fig_height,
             showlegend=False,
             title_text="",
-            font=dict(color="#E8EAF0", family="Inter, sans-serif"),
-            margin=dict(l=24, r=24, t=24, b=24),
+            font=dict(color=font_color, family="Inter, sans-serif"),
+            margin=plot_margin,
         )
         fig.update_xaxes(
             visible=False, showgrid=False, zeroline=False, showticklabels=False, title_text=""
@@ -195,7 +281,7 @@ def _apply_figure_axes(
             template="plotly_white",
             width=fig_width,
             height=fig_height,
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+            showlegend=False,
         )
 
 
@@ -236,6 +322,142 @@ def _add_rect(
     )
 
 
+def _column_marker_dict(fill_color: str) -> dict:
+    """High-contrast column triangle for the dark game canvas."""
+    return dict(
+        symbol="triangle-up",
+        size=COLUMN_MARKER_SIZE,
+        color=fill_color,
+        opacity=1.0,
+        line=dict(
+            color=COLUMN_MARKER_OUTLINE,
+            width=COLUMN_MARKER_OUTLINE_WIDTH,
+        ),
+    )
+
+
+def _column_marker_trace_kwargs(fill_color: str) -> dict:
+    """Marker + selection styles so columns never fade on click."""
+    return {
+        "marker": _column_marker_dict(fill_color),
+        "unselected": {"marker": {"opacity": 1.0}},
+        "selected": {"marker": {"opacity": 1.0}},
+    }
+
+
+def _preliminary_color(status: str) -> str:
+    return {
+        "PASS": PRELIMINARY_PASS_COLOR,
+        "WARN": PRELIMINARY_WARN_COLOR,
+        "FAIL": PRELIMINARY_FAIL_COLOR,
+    }.get(status, COLUMN_ACTIVE_COLOR)
+
+
+def _element_hover_footer() -> str:
+    return "<br><i>Click for full report</i><extra></extra>"
+
+
+def _add_layout_element_traces(
+    fig: go.Figure,
+    layout_elements: list[LayoutElement],
+    tributary_columns: list[Column] | None,
+) -> None:
+    """Draw columns and beams with preliminary status colors and click ids."""
+    column_legend = False
+    beam_legend = False
+
+    for element in layout_elements:
+        color = _preliminary_color(element.preliminary_status)
+        if element.element_type == "beam" and element.x2 is not None and element.y2 is not None:
+            mid_x = (element.x + element.x2) / 2.0
+            mid_y = (element.y + element.y2) / 2.0
+            hover = (
+                f"<b>{element.name}</b><br>"
+                f"Span: {element.span_m:.2f} m<br>"
+                f"From ({element.x:.2f}, {element.y:.2f}) → "
+                f"({element.x2:.2f}, {element.y2:.2f})<br>"
+                f"Preliminary: {element.preliminary_status}"
+                + _element_hover_footer()
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=[element.x, element.x2],
+                    y=[element.y, element.y2],
+                    mode="lines",
+                    line=dict(color=color, width=BEAM_LINE_WIDTH),
+                    name="Beam",
+                    legendgroup="beams",
+                    showlegend=not beam_legend,
+                    hoverinfo="skip",
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=[mid_x],
+                    y=[mid_y],
+                    mode="markers",
+                    marker=dict(
+                        size=BEAM_HIT_MARKER_SIZE,
+                        color=color,
+                        symbol="circle",
+                        opacity=0.35,
+                        line=dict(color=COLUMN_MARKER_BORDER, width=1),
+                    ),
+                    name="Beam",
+                    legendgroup=f"beam-hit-{element.element_id}",
+                    showlegend=False,
+                    customdata=[[element.element_id]],
+                    hovertemplate=hover,
+                )
+            )
+            beam_legend = True
+        elif element.element_type == "column":
+            fig.add_trace(
+                go.Scatter(
+                    x=[element.x],
+                    y=[element.y],
+                    mode="markers",
+                    name="Column",
+                    legendgroup="columns_active",
+                    showlegend=not column_legend,
+                    customdata=[[element.element_id]],
+                    hovertemplate=(
+                        f"<b>{element.name}</b><br>"
+                        f"X: {element.x:.2f} m<br>"
+                        f"Y: {element.y:.2f} m<br>"
+                        f"Preliminary: {element.preliminary_status}"
+                        + _element_hover_footer()
+                    ),
+                    **_column_marker_trace_kwargs(color),
+                )
+            )
+            column_legend = True
+
+    if tributary_columns:
+        excluded_legend = False
+        for column in tributary_columns:
+            if not column.excluded:
+                continue
+            fig.add_trace(
+                go.Scatter(
+                    x=[column.x],
+                    y=[column.y],
+                    mode="markers",
+                    name="Excluded column",
+                    legendgroup="columns_excluded",
+                    showlegend=not excluded_legend,
+                    hovertemplate=(
+                        f"<b>{column.column_id}</b> (excluded)<br>"
+                        f"X: {column.x:.2f} m<br>"
+                        f"Y: {column.y:.2f} m"
+                        "<extra></extra>"
+                    ),
+                    **_column_marker_trace_kwargs(COLUMN_EXCLUDED_COLOR),
+                )
+            )
+            excluded_legend = True
+
+
 def build_layout_figure(
     panel: PanelSpec,
     config: LayoutConfig,
@@ -244,9 +466,11 @@ def build_layout_figure(
     *,
     show_max_area: bool = True,
     tributary_columns: list[Column] | None = None,
+    layout_elements: list[LayoutElement] | None = None,
     obstacle_zones: list[Rect] | None = None,
     title: str = "Panel layout",
     dark_theme: bool = False,
+    game_canvas: bool = False,
     figure_height: int = FIGURE_HEIGHT,
 ) -> go.Figure:
     """Build a Plotly figure with panels, alleys, optional tributary overlay, and bbox."""
@@ -265,35 +489,27 @@ def build_layout_figure(
 
     fig = go.Figure()
 
-    for index, rect in enumerate(panels):
+    for rect in panels:
         _add_rect(
             fig,
             rect,
             fillcolor=panel_fill,
             line_color=panel_line,
             legend_group="panels",
-            showlegend=index == 0,
+            showlegend=False,
             name="Panel",
         )
 
-    spine_legend_shown = False
-    parallel_legend_shown = False
     parallel_alley_index = 0
     for rect in alleys:
         is_spine = rect[1] == 0.0 and rect[3] <= config.alley_width + 1e-9
-        if is_spine:
-            showlegend = not spine_legend_shown
-            spine_legend_shown = True
-        else:
-            showlegend = not parallel_legend_shown
-            parallel_legend_shown = True
         _add_rect(
             fig,
             rect,
             fillcolor=spine_fill if is_spine else alley_fill,
             line_color=spine_line if is_spine else alley_line,
             legend_group="spine" if is_spine else "alleys",
-            showlegend=showlegend,
+            showlegend=False,
             name="Edge spine" if is_spine else "Parallel alley",
         )
         if dark_theme:
@@ -344,40 +560,41 @@ def build_layout_figure(
             )
             tributary_legend_shown = True
 
-        active_legend_shown = False
-        excluded_legend_shown = False
-        for column in tributary_columns:
-            is_excluded = column.excluded
-            fig.add_trace(
-                go.Scatter(
-                    x=[column.x],
-                    y=[column.y],
-                    mode="markers",
-                    marker=dict(
-                        symbol="triangle-up",
-                        size=10,
-                        color=COLUMN_EXCLUDED_COLOR if is_excluded else COLUMN_ACTIVE_COLOR,
-                    ),
-                    name="Excluded column" if is_excluded else "Column",
-                    legendgroup="columns_excluded" if is_excluded else "columns_active",
-                    showlegend=(
-                        (not excluded_legend_shown)
-                        if is_excluded
-                        else (not active_legend_shown)
-                    ),
-                    hovertemplate=(
-                        f"<b>{column.column_id}</b>"
-                        f"{' (excluded)' if is_excluded else ''}<br>"
-                        f"X: {column.x:.2f} m<br>"
-                        f"Y: {column.y:.2f} m"
-                        "<extra></extra>"
-                    ),
+        if layout_elements:
+            _add_layout_element_traces(fig, layout_elements, tributary_columns)
+        else:
+            active_legend_shown = False
+            excluded_legend_shown = False
+            for column in tributary_columns:
+                is_excluded = column.excluded
+                fig.add_trace(
+                    go.Scatter(
+                        x=[column.x],
+                        y=[column.y],
+                        mode="markers",
+                        name="Excluded column" if is_excluded else "Column",
+                        legendgroup="columns_excluded" if is_excluded else "columns_active",
+                        showlegend=(
+                            (not excluded_legend_shown)
+                            if is_excluded
+                            else (not active_legend_shown)
+                        ),
+                        hovertemplate=(
+                            f"<b>{column.column_id}</b>"
+                            f"{' (excluded)' if is_excluded else ''}<br>"
+                            f"X: {column.x:.2f} m<br>"
+                            f"Y: {column.y:.2f} m"
+                            "<extra></extra>"
+                        ),
+                        **_column_marker_trace_kwargs(
+                            COLUMN_EXCLUDED_COLOR if is_excluded else COLUMN_ACTIVE_COLOR
+                        ),
+                    )
                 )
-            )
-            if is_excluded:
-                excluded_legend_shown = True
-            else:
-                active_legend_shown = True
+                if is_excluded:
+                    excluded_legend_shown = True
+                else:
+                    active_legend_shown = True
 
     if obstacle_zones:
         obstacle_legend_shown = False
@@ -405,7 +622,7 @@ def build_layout_figure(
             line_width=2,
             line_dash="dash",
             legend_group="bbox",
-            showlegend=True,
+            showlegend=False,
             name="Layout bbox",
         )
 
@@ -419,7 +636,7 @@ def build_layout_figure(
             line_width=2,
             line_dash="dot",
             legend_group="max_area",
-            showlegend=True,
+            showlegend=False,
             name="Max area",
         )
         x_max = max(bx + bw, config.max_area_x)
@@ -433,11 +650,12 @@ def build_layout_figure(
         x_max,
         y_max,
         dark_theme=dark_theme,
+        game_canvas=game_canvas,
         fig_height=figure_height,
     )
     if title:
         fig.update_layout(title=title)
-    elif dark_theme:
+    elif dark_theme or game_canvas:
         fig.update_layout(title_text="")
     return fig
 

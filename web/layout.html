@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SolarForge — Layout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/setup.css">
+  <link rel="stylesheet" href="/static/css/setup-extras.css">
+  <link rel="stylesheet" href="/static/css/layout-extras.css">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+</head>
+<body class="layout-page">
+
+<nav class="stepper" role="navigation" aria-label="Build stages">
+  <a class="step done" href="/" title="Back to Setup"><div class="step-icon">✓</div> Setup</a>
+  <div class="step-connector"></div>
+  <div class="step active"><div class="step-icon">2</div> Layout</div>
+  <div class="step-connector"></div>
+  <div class="step" title="Coming soon"><div class="step-icon">3</div> Structure</div>
+  <div class="step-connector"></div>
+  <div class="step" title="Coming soon"><div class="step-icon">4</div> Results</div>
+</nav>
+
+<div class="app layout-app">
+  <aside class="left-panel" aria-label="Layout settings">
+    <div class="panel-section">
+      <div class="section-label">Column grid</div>
+      <div class="struct-row">
+        <div class="struct-field">
+          <label class="struct-label" for="col-count-x">Columns X</label>
+          <input class="struct-input" type="number" id="col-count-x" min="2" step="1" value="2">
+          <div class="struct-hint" id="spacing-x">— m spacing</div>
+        </div>
+        <div class="struct-field">
+          <label class="struct-label" for="col-count-y">Columns Y</label>
+          <input class="struct-input" type="number" id="col-count-y" min="2" step="1" value="2">
+          <div class="struct-hint" id="spacing-y">— m spacing</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Column placement</div>
+      <div class="struct-field">
+        <label class="struct-label" for="col-overrides">Custom coordinates</label>
+        <textarea class="struct-textarea" id="col-overrides" rows="3" placeholder="x, y  (one per line)"></textarea>
+      </div>
+      <div class="struct-field">
+        <label class="struct-label" for="obstacles">Obstacle zones</label>
+        <textarea class="struct-textarea" id="obstacles" rows="3" placeholder="x, y, width, height"></textarea>
+      </div>
+    </div>
+
+    <div class="panel-section rules-note">
+      <div class="section-label">Rules of thumb</div>
+      <p class="rules-caption" id="rules-caption">Preliminary screening — no sections chosen yet.</p>
+    </div>
+
+    <div class="panel-section partition-banner" id="partition-banner" hidden>
+      <div class="partition-msg" id="partition-msg"></div>
+    </div>
+  </aside>
+
+  <main class="canvas-wrap layout-canvas" aria-label="Layout design canvas">
+    <div id="plotly-chart" class="plotly-host"></div>
+    <div class="canvas-legend">
+      <span class="legend-chip panels">Panels</span>
+      <span class="legend-chip alleys">Alleys</span>
+      <span class="legend-chip tributary">Tributary</span>
+      <span class="legend-chip columns">Columns</span>
+      <span class="legend-chip beams">Beams</span>
+    </div>
+    <div class="empty-state" id="empty-state">
+      <p>Complete <strong>Setup</strong> and press <strong>NEXT</strong> to load the layout here.</p>
+      <a class="empty-link" href="/">← Back to Setup</a>
+    </div>
+  </main>
+
+  <aside class="side-rail summary-rail" aria-label="Layout summary">
+    <div class="section-label">Layout summary</div>
+    <div class="side-metrics">
+      <div class="side-metric"><span class="side-key">Panels</span><span class="side-val" id="sum-panels">—</span></div>
+      <div class="side-metric"><span class="side-key">Columns</span><span class="side-val" id="sum-columns">—</span></div>
+      <div class="side-metric"><span class="side-key">Beams</span><span class="side-val" id="sum-beams">—</span></div>
+      <div class="side-metric"><span class="side-key">Beam length</span><span class="side-val" id="sum-beam-len">—</span></div>
+      <div class="side-metric"><span class="side-key">Total DL</span><span class="side-val" id="sum-dl">—</span></div>
+      <div class="side-metric"><span class="side-key">Total LL</span><span class="side-val" id="sum-ll">—</span></div>
+      <div class="side-metric highlight"><span class="side-key">Passing</span><span class="side-val" id="sum-passing">—</span></div>
+    </div>
+  </aside>
+
+  <aside class="side-rail report-rail" aria-label="Element report">
+    <div class="report-header">
+      <div class="section-label">Element report</div>
+      <button type="button" class="report-close" id="report-close" title="Clear selection" hidden>✕</button>
+    </div>
+    <div id="report-empty" class="report-empty">
+      Click a column or beam on the canvas to see preliminary checks here.
+    </div>
+    <div id="report-content" hidden>
+      <div class="report-name" id="report-name">—</div>
+      <div class="report-type" id="report-type">—</div>
+      <div class="report-position" id="report-position">—</div>
+      <div class="report-loads" id="report-loads"></div>
+      <div class="report-checks" id="report-checks"></div>
+      <div class="report-overall" id="report-overall"></div>
+      <p class="side-hint">Full analysis with chosen sections in <strong>Structure →</strong></p>
+    </div>
+  </aside>
+</div>
+
+<div class="hud layout-hud" role="toolbar" aria-label="Layout summary">
+  <div class="hud-metric"><span class="hud-metric-label">Columns</span><span class="hud-metric-val" id="m-columns">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">Active</span><span class="hud-metric-val" id="m-active">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">Panel area</span><span class="hud-metric-val" id="m-panel-area">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">DL</span><span class="hud-metric-val" id="m-dl">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">LL</span><span class="hud-metric-val" id="m-ll">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">Partition</span><span class="hud-metric-val" id="m-partition">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">Elements</span><span class="hud-metric-val" id="m-elements">—</span></div>
+  <div class="hud-divider"></div>
+  <a class="proceed-btn back-btn" href="/" aria-label="Back to Setup">
+    <div class="proceed-icon">←</div>
+    <div class="proceed-label">SETUP</div>
+  </a>
+  <button type="button" class="proceed-btn" id="next-btn" aria-label="Proceed to Structure" disabled>
+    <div class="proceed-icon">→</div>
+    <div class="proceed-label">NEXT</div>
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="/static/js/layout.js"></script>
+</body>
+</html>

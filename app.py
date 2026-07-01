@@ -60,8 +60,9 @@ if os.environ.get("PANEL_CALCULATOR_SKIP_RELOAD") != "1":
     import ui.hud_tooltips as _hud_tooltips
     import ui.setup_controls as _setup_controls
     import ui.sidebar_inputs as _sidebar_inputs
-    import ui.setup_tab as _setup_tab
     import ui.theme as _theme
+    importlib.reload(_theme)
+    import ui.setup_tab as _setup_tab
     import ui.analysis_tab as _analysis_tab
 
     importlib.reload(_layout_state)
@@ -81,18 +82,18 @@ if os.environ.get("PANEL_CALCULATOR_SKIP_RELOAD") != "1":
     importlib.reload(_hud_tooltips)
     importlib.reload(_setup_controls)
     importlib.reload(_sidebar_inputs)
-    importlib.reload(_setup_tab)
     importlib.reload(_theme)
+    importlib.reload(_setup_tab)
     importlib.reload(_analysis_tab)
 
 from ui.materials_tab import render_materials_tab
-from ui.game_shell import render_app_header, render_stepper
+from ui.game_shell import render_stepper
 from ui.navigation import apply_pending_main_view
 from ui.analysis_tab import render_analysis_tab
 from ui.setup_tab import render_setup_tab
 from ui.session_store import init_session_defaults
 from ui.sidebar_inputs import VIEW_ANALYSIS, VIEW_MATERIALS, VIEW_SETUP, render_sidebar
-from ui.theme import inject_game_theme
+from ui.theme import inject_game_theme, render_theme_toggle
 
 if "setup_accepted" not in st.session_state:
     st.session_state.setup_accepted = False
@@ -102,12 +103,17 @@ if "main_view" not in st.session_state:
 
 st.set_page_config(page_title="SolarForge", layout="wide", page_icon="☀")
 inject_game_theme()
-render_app_header()
 
 apply_pending_main_view()
 
 active_view = st.session_state.get("main_view", VIEW_SETUP)
-render_stepper(active_view)
+
+st.markdown('<span class="sf-main-root"></span>', unsafe_allow_html=True)
+_top_spacer, _stepper_col, _toggle_col = st.columns([1, 6, 1], gap="small")
+with _stepper_col:
+    render_stepper(active_view)
+with _toggle_col:
+    render_theme_toggle()
 
 inputs = render_sidebar(active_view)
 

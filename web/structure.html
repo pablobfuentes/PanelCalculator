@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SolarForge — Structure</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/setup.css">
+  <link rel="stylesheet" href="/static/css/setup-extras.css">
+  <link rel="stylesheet" href="/static/css/structure-extras.css">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+</head>
+<body class="structure-page">
+
+<nav class="stepper" role="navigation" aria-label="Build stages">
+  <a class="step done" href="/" title="Back to Setup"><div class="step-icon">✓</div> Setup</a>
+  <div class="step-connector"></div>
+  <div class="step active"><div class="step-icon">2</div> Structure</div>
+  <div class="step-connector"></div>
+  <div class="step" title="Coming soon"><div class="step-icon">3</div> Materials</div>
+  <div class="step-connector"></div>
+  <div class="step" title="Coming soon"><div class="step-icon">4</div> Results</div>
+</nav>
+
+<div class="app structure-app">
+  <aside class="left-panel" aria-label="Structure settings">
+    <div class="panel-section">
+      <div class="section-label">Wind (NTC-Viento 2020)</div>
+      <div class="struct-field">
+        <label class="struct-label" for="wind-speed">Wind speed (km/h)</label>
+        <input class="struct-input" type="number" id="wind-speed" min="1" step="5" value="120">
+      </div>
+      <div class="struct-field">
+        <label class="struct-label" for="wind-exposure">Exposure</label>
+        <select class="struct-select" id="wind-exposure">
+          <option value="A">A — Dense urban</option>
+          <option value="B" selected>B — Urban / suburban</option>
+          <option value="C">C — Open country</option>
+          <option value="D">D — Coastal</option>
+        </select>
+        <div class="struct-hint" id="exposure-hint">Urban, suburban, or wooded terrain.</div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Column grid</div>
+      <div class="struct-field">
+        <label class="struct-label" for="col-height">Column height (m)</label>
+        <input class="struct-input" type="number" id="col-height" min="0.1" step="0.1" value="2.5">
+      </div>
+      <div class="struct-row">
+        <div class="struct-field">
+          <label class="struct-label" for="col-count-x">Columns X</label>
+          <input class="struct-input" type="number" id="col-count-x" min="2" step="1" value="2">
+          <div class="struct-hint" id="spacing-x">— m spacing</div>
+        </div>
+        <div class="struct-field">
+          <label class="struct-label" for="col-count-y">Columns Y</label>
+          <input class="struct-input" type="number" id="col-count-y" min="2" step="1" value="2">
+          <div class="struct-hint" id="spacing-y">— m spacing</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Column placement</div>
+      <div class="struct-field">
+        <label class="struct-label" for="col-overrides">Custom coordinates</label>
+        <textarea class="struct-textarea" id="col-overrides" rows="3" placeholder="x, y  (one per line)"></textarea>
+      </div>
+      <div class="struct-field">
+        <label class="struct-label" for="obstacles">Obstacle zones</label>
+        <textarea class="struct-textarea" id="obstacles" rows="3" placeholder="x, y, width, height"></textarea>
+      </div>
+    </div>
+
+    <div class="panel-section partition-banner" id="partition-banner" hidden>
+      <div class="partition-msg" id="partition-msg"></div>
+    </div>
+  </aside>
+
+  <main class="canvas-wrap structure-canvas" aria-label="Tributary design canvas">
+    <div id="plotly-chart" class="plotly-host"></div>
+    <div class="canvas-legend">
+      <span class="legend-chip panels">Panels</span>
+      <span class="legend-chip alleys">Alleys</span>
+      <span class="legend-chip tributary">Tributary</span>
+      <span class="legend-chip columns">Columns</span>
+    </div>
+    <div class="empty-state" id="empty-state">
+      <p>Complete <strong>Setup</strong> and press <strong>NEXT</strong> to load the layout here.</p>
+      <a class="empty-link" href="/">← Back to Setup</a>
+    </div>
+  </main>
+
+  <aside class="bom-rail" aria-label="Live BOM">
+    <div class="section-label">Live BOM</div>
+    <div class="bom-metrics">
+      <div class="bom-metric"><span class="bom-key">Panels</span><span class="bom-val" id="bom-panels">—</span></div>
+      <div class="bom-metric"><span class="bom-key">Columns</span><span class="bom-val" id="bom-columns">—</span></div>
+      <div class="bom-metric"><span class="bom-key">PTR 4×4</span><span class="bom-val" id="bom-ptr">—</span></div>
+      <div class="bom-metric"><span class="bom-key">Truss chords</span><span class="bom-val" id="bom-chords">—</span></div>
+      <div class="bom-metric"><span class="bom-key">Base plates</span><span class="bom-val" id="bom-plates">—</span></div>
+      <div class="bom-metric highlight"><span class="bom-key">Est. steel</span><span class="bom-val" id="bom-steel">—</span></div>
+    </div>
+  </aside>
+</div>
+
+<section class="detail-stack" aria-label="Analysis tables">
+  <div class="detail-card">
+    <div class="detail-title">Column tributary areas</div>
+    <div class="table-wrap" id="columns-table-wrap">
+      <p class="table-placeholder">Adjust the column grid to see tributary assignments.</p>
+    </div>
+  </div>
+  <div class="detail-card">
+    <div class="detail-title">FEA results</div>
+    <div class="detail-caption">PyNite 3D frame — fixed bases, tributary loads at post tops, chord members between columns.</div>
+    <div class="table-wrap" id="fea-table-wrap">
+      <p class="table-placeholder">Fix tributary partition to run FEA.</p>
+    </div>
+  </div>
+  <div class="detail-card">
+    <div class="detail-title">Code checks</div>
+    <div class="code-summary" id="code-summary" hidden>
+      <span class="code-pill pass" id="code-pass">PASS 0</span>
+      <span class="code-pill warn" id="code-warn">WARN 0</span>
+      <span class="code-pill fail" id="code-fail">FAIL 0</span>
+    </div>
+    <div class="table-wrap" id="checks-table-wrap">
+      <p class="table-placeholder">Code checks appear after a successful FEA solve.</p>
+    </div>
+  </div>
+</section>
+
+<div class="hud structure-hud" role="toolbar" aria-label="Structure summary">
+  <div class="hud-metric"><span class="hud-metric-label">Columns</span><span class="hud-metric-val" id="m-columns">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">Active</span><span class="hud-metric-val" id="m-active">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">Panel area</span><span class="hud-metric-val" id="m-panel-area">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">Tributary</span><span class="hud-metric-val" id="m-trib-area">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">Dead load</span><span class="hud-metric-val" id="m-load">—</span></div>
+  <div class="hud-divider"></div>
+  <div class="hud-metric"><span class="hud-metric-label">Partition</span><span class="hud-metric-val" id="m-partition">—</span></div>
+  <div class="hud-divider"></div>
+  <a class="proceed-btn back-btn" href="/" aria-label="Back to Setup">
+    <div class="proceed-icon">←</div>
+    <div class="proceed-label">SETUP</div>
+  </a>
+  <button type="button" class="proceed-btn" id="next-btn" aria-label="Proceed to Materials" disabled>
+    <div class="proceed-icon">→</div>
+    <div class="proceed-label">NEXT</div>
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="/static/js/structure.js"></script>
+</body>
+</html>

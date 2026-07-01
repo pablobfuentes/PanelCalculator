@@ -14,6 +14,7 @@ from ui.setup_controls import (
     render_setup_left_panel,
 )
 from ui.sidebar_inputs import SidebarInputs, VIEW_ANALYSIS, resolve_layout_from_inputs
+from ui.theme import is_dark_theme
 
 
 def render_setup_tab(inputs: SidebarInputs) -> None:
@@ -30,7 +31,6 @@ def render_setup_tab(inputs: SidebarInputs) -> None:
 
     with canvas_col:
         st.markdown('<span class="sf-canvas-col-root"></span>', unsafe_allow_html=True)
-        render_dimension_bubbles()
         if layout.panel_count == 0:
             _render_empty_layout_warning(layout, inputs.target_panels)
             st.session_state.setup_accepted = False
@@ -39,9 +39,11 @@ def render_setup_tab(inputs: SidebarInputs) -> None:
                 layout,
                 show_tributary=False,
                 title="",
-                dark_theme=True,
+                dark_theme=is_dark_theme(),
+                game_canvas=True,
                 figure_height=520,
             )
+            render_dimension_bubbles(layout=layout, figure_height=520)
 
     can_proceed = layout.panel_count > 0
     if render_setup_hud(can_proceed=can_proceed):

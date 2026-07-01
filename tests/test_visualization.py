@@ -11,7 +11,12 @@ from core.layout import (
     grid_bbox,
 )
 from core.models import LayoutConfig, PanelSpec
-from core.visualization import build_layout_figure, save_layout_figure
+from core.visualization import (
+    build_layout_figure,
+    figure_axis_max_for_max_area,
+    max_area_pill_percents,
+    save_layout_figure,
+)
 
 REFERENCE_PAIRS = 3
 REFERENCE_ROWS = 2
@@ -90,6 +95,21 @@ def test_load_intensity_color_endpoints():
 
     assert "144" in _load_intensity_color(0.0)
     assert "220" in _load_intensity_color(1.0)
+
+
+def test_max_area_pill_percents_centered_on_box():
+    p = max_area_pill_percents(12.0, 8.0, 12.0, 8.0, fig_width=900, fig_height=520)
+    assert 0 < p["w_left"] < 100
+    assert 0 < p["w_top"] < 100
+    assert 0 < p["h_left"] < 100
+    assert 0 < p["h_top"] < 100
+    assert p["w_left"] < p["h_left"]
+    assert p["w_top"] < p["h_top"]
+
+
+def test_figure_axis_max_for_max_area():
+    assert figure_axis_max_for_max_area(12.0, 8.0, (0.0, 0.0, 11.7, 7.9)) == (12.0, 8.0)
+    assert figure_axis_max_for_max_area(12.0, 8.0, (0.0, 0.0, 13.0, 9.0)) == (13.0, 9.0)
 
 
 def test_build_layout_figure_reference_layout(panel: PanelSpec, config: LayoutConfig):

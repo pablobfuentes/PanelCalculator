@@ -58,17 +58,6 @@ def _step_icon(label: str, state: str) -> str:
     return str(_step_index(label) + 1)
 
 
-def render_app_header() -> None:
-    st.markdown(
-        """
-        <div class="sf-header">
-          <p class="sf-title">Solar<span>Forge</span></p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def render_stepper(active_view: str) -> None:
     """Visual-only 5-step progress bar."""
     layout_accepted = bool(st.session_state.get("setup_accepted"))

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from core.visualization import figure_axis_max_for_max_area, max_area_pill_percents
 from ui.hud_tooltips import (
     alley_width_tooltip_svg,
     gap_tooltip_svg,
@@ -221,9 +222,39 @@ def render_setup_left_panel(inputs: SidebarInputs, layout: ResolvedLayout) -> No
     persist_widgets(keys)
 
 
-def render_dimension_bubbles() -> None:
+def render_dimension_bubbles(*, layout: ResolvedLayout, figure_height: int = 520) -> None:
     """Floating ↔ / ↕ max-area controls on the canvas edges."""
     hydrate_widgets(["sb_max_x", "sb_max_y"])
+    max_x = float(get_persist("persist_max_x"))
+    max_y = float(get_persist("persist_max_y"))
+    axis_x, axis_y = figure_axis_max_for_max_area(max_x, max_y, layout.bbox)
+    fallback = max_area_pill_percents(
+        max_x,
+        max_y,
+        axis_x,
+        axis_y,
+        fig_width=900,
+        fig_height=float(figure_height),
+        margin_l=24,
+        margin_r=52,
+        margin_t=42,
+        margin_b=24,
+    )
+    st.markdown(
+        f"""
+        <style>
+        div[data-testid="stColumn"]:has(.sf-canvas-col-root) > div[data-testid="stVerticalBlock"] {{
+          --dim-w-left: {fallback["w_left"]:.3f}%;
+          --dim-w-top: {fallback["w_top"]:.3f}%;
+          --dim-h-left: {fallback["h_left"]:.3f}%;
+          --dim-h-top: {fallback["h_top"]:.3f}%;
+          --sf-canvas-plot-h: {figure_height + 52}px;
+        }}
+        </style>
+        <span class="sf-dim-overlay-root"></span>
+        """,
+        unsafe_allow_html=True,
+    )
     w_col, h_col = st.columns(2, gap="small")
 
     def _dim_pill(slot_cls: str, arrow: str, widget_key: str, label: str) -> None:

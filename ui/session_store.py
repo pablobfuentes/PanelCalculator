@@ -104,6 +104,7 @@ ANALYSIS_WIDGET_KEYS: tuple[str, ...] = (
 APP_DEFAULTS: dict[str, object] = {
     "setup_accepted": False,
     "main_view": VIEW_SETUP,
+    "sf_color_theme": "dark",
 }
 
 

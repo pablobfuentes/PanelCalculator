@@ -19,6 +19,7 @@ from ui.game_shell import close_game_shell, render_game_shell
 from ui.layout_state import bom_panel_count, layout_from_snapshot
 from ui.session_store import hydrate_widgets, persist_widgets
 from ui.sidebar_inputs import SidebarInputs
+from ui.theme import is_dark_theme
 
 
 def render_analysis_tab(inputs: SidebarInputs) -> None:
@@ -128,7 +129,7 @@ def render_analysis_tab(inputs: SidebarInputs) -> None:
             obstacle_zones_text=obstacle_zones,
             show_tributary=True,
             title="",
-            dark_theme=True,
+            dark_theme=is_dark_theme(),
             figure_height=480,
         )
         st.markdown("</div>", unsafe_allow_html=True)
