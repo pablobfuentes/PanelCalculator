@@ -12,6 +12,7 @@ const DEFAULT_SPACING_M = 3.5;
 const DEFAULT_STATE = {
   columnCountX: 2,
   columnCountY: 2,
+  columnHeight: 2.5,
   columnOverrides: '',
   obstacles: '',
   countsSeeded: false,
@@ -21,6 +22,7 @@ const state = loadLayoutState();
 let accepted = null;
 let layoutData = null;
 let selectedElementId = null;
+let selectedCheckId = null;
 let fetchTimer = null;
 const toastEl = document.getElementById('toast');
 
@@ -147,6 +149,7 @@ function seedColumnCounts(fieldW, fieldH) {
 function syncFormFromState() {
   document.getElementById('col-count-x').value = state.columnCountX;
   document.getElementById('col-count-y').value = state.columnCountY;
+  document.getElementById('col-height').value = state.columnHeight;
   document.getElementById('col-overrides').value = state.columnOverrides;
   document.getElementById('obstacles').value = state.obstacles;
 }
@@ -154,6 +157,7 @@ function syncFormFromState() {
 function readFormToState() {
   state.columnCountX = Math.max(2, parseInt(document.getElementById('col-count-x').value, 10) || 2);
   state.columnCountY = Math.max(2, parseInt(document.getElementById('col-count-y').value, 10) || 2);
+  state.columnHeight = Math.max(0.1, parseFloat(document.getElementById('col-height').value) || 2.5);
   state.columnOverrides = document.getElementById('col-overrides').value;
   state.obstacles = document.getElementById('obstacles').value;
   saveLayoutState();
@@ -165,6 +169,7 @@ function buildRequestBody() {
     snapshot: accepted.snapshot,
     column_count_x: state.columnCountX,
     column_count_y: state.columnCountY,
+    column_height_m: state.columnHeight,
     column_overrides: state.columnOverrides,
     obstacle_zones: state.obstacles,
     panels_locked: Boolean(accepted.panels_locked),
@@ -193,9 +198,12 @@ function scheduleRefresh() {
 function renderRulesCaption(rules) {
   if (!rules) return;
   const el = document.getElementById('rules-caption');
+  const spanNote = rules.default_column_spacing_m
+    ? `max span ${rules.max_recommended_beam_span_m} m (2×${rules.default_column_spacing_m} m − 1), `
+    : `max span ${rules.max_recommended_beam_span_m} m, `;
   el.textContent =
     `L/${rules.deflection_limit_denominator} deflection, ` +
-    `max span ${rules.max_recommended_beam_span_m} m, ` +
+    spanNote +
     `LL ${rules.live_load_kn_m2} kN/m², ` +
     `1.2D+1.6L screening. No sections chosen.`;
 }
@@ -251,8 +259,71 @@ function renderSummary(summary, metrics) {
   }
 }
 
+function formatCalcValue(value, unit) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return String(value);
+  if (unit === '—') return String(n);
+  if (Math.abs(n) >= 1e6) return `${n.toExponential(2)} ${unit}`;
+  if (Math.abs(n) >= 100) return `${n.toFixed(1)} ${unit}`;
+  if (Math.abs(n) >= 1) return `${n.toFixed(3)} ${unit}`;
+  return `${n.toFixed(5)} ${unit}`;
+}
+
+function clearCalcDetail() {
+  selectedCheckId = null;
+  document.getElementById('right-rails')?.classList.remove('calc-open');
+  const rail = document.getElementById('calc-rail');
+  if (rail) rail.hidden = true;
+  document.querySelectorAll('.check-row.selected').forEach((row) => row.classList.remove('selected'));
+}
+
+function renderCalcDetail(check) {
+  if (!check?.detail) return;
+
+  selectedCheckId = check.check_id;
+  document.querySelectorAll('.check-row.selected').forEach((row) => row.classList.remove('selected'));
+  const activeRow = document.querySelector(`.check-row[data-check-id="${check.check_id}"]`);
+  activeRow?.classList.add('selected');
+
+  const rails = document.getElementById('right-rails');
+  const rail = document.getElementById('calc-rail');
+  rails.classList.add('calc-open');
+  rail.hidden = false;
+
+  document.getElementById('calc-title').textContent = check.label;
+  const verdictEl = document.getElementById('calc-verdict');
+  verdictEl.textContent = check.detail.verdict;
+  verdictEl.className = `calc-verdict ${check.passed ? 'pass' : 'fail'}`;
+
+  document.getElementById('calc-vars').innerHTML = check.detail.variables
+    .map(
+      (variable) =>
+        `<div class="calc-var-row">` +
+        `<span class="calc-var-name">${variable.name}<code>${variable.symbol}</code></span>` +
+        `<span class="calc-var-val">${formatCalcValue(variable.value, variable.unit)}</span>` +
+        `</div>`,
+    )
+    .join('');
+
+  document.getElementById('calc-steps').innerHTML = check.detail.steps
+    .map((step) => {
+      const resultClass =
+        step.result === 'PASS' ? 'pass' : step.result === 'FAIL' ? 'fail' : '';
+      return (
+        `<div class="calc-step">` +
+        `<div class="calc-step-label">${step.label}</div>` +
+        `<div class="calc-step-formula">${step.formula}</div>` +
+        `<div class="calc-step-expr">${step.expression}</div>` +
+        `<div class="calc-step-result ${resultClass}">${step.result}</div>` +
+        `</div>`
+      );
+    })
+    .join('');
+}
+
 function clearElementReport() {
   selectedElementId = null;
+  clearCalcDetail();
   document.getElementById('report-empty').hidden = false;
   document.getElementById('report-content').hidden = true;
   document.getElementById('report-close').hidden = true;
@@ -264,6 +335,10 @@ function renderElementReport(element) {
     clearElementReport();
     return;
   }
+  const elementChanged = selectedElementId !== element.element_id;
+  const keepCheckId = elementChanged ? null : selectedCheckId;
+  if (elementChanged) clearCalcDetail();
+
   selectedElementId = element.element_id;
   document.getElementById('report-empty').hidden = true;
   document.getElementById('report-content').hidden = false;
@@ -278,7 +353,9 @@ function renderElementReport(element) {
       `From (${element.x.toFixed(2)}, ${element.y.toFixed(2)}) m → ` +
       `(${element.x2.toFixed(2)}, ${element.y2.toFixed(2)}) m · Span ${element.span_m.toFixed(2)} m`;
   } else {
-    positionText = `Plan position (${element.x.toFixed(2)}, ${element.y.toFixed(2)}) m`;
+    positionText =
+      `Plan (${element.x.toFixed(2)}, ${element.y.toFixed(2)}) m · ` +
+      `Height ${state.columnHeight.toFixed(1)} m`;
   }
   document.getElementById('report-position').textContent = positionText;
 
@@ -295,14 +372,20 @@ function renderElementReport(element) {
       '<span class="check-value">—</span><span class="check-icon pass">✓</span></div>';
   } else {
     checksEl.innerHTML = element.checks
-      .map(
-        (check) =>
-          `<div class="check-row ${check.passed ? 'pass' : 'fail'}">` +
+      .map((check) => {
+        const detailClass = check.detail ? ' has-detail' : '';
+        const selectedClass = check.check_id === keepCheckId ? ' selected' : '';
+        const attrs = check.detail
+          ? ` data-check-id="${check.check_id}" role="button" tabindex="0"`
+          : '';
+        return (
+          `<div class="check-row ${check.passed ? 'pass' : 'fail'}${detailClass}${selectedClass}"${attrs}>` +
           `<span class="check-label">${check.label}</span>` +
           `<span class="check-value">${check.value} / ${check.limit} ${check.unit}</span>` +
           `<span class="check-icon ${check.passed ? 'pass' : 'fail'}">${check.passed ? '✓' : '✗'}</span>` +
-          `</div>`,
-      )
+          `</div>`
+        );
+      })
       .join('');
   }
 
@@ -317,6 +400,11 @@ function renderElementReport(element) {
   overall.textContent = element.overall_pass
     ? `✓ Preliminary ${element.preliminary_status}`
     : `✗ Preliminary ${element.preliminary_status}`;
+
+  if (keepCheckId) {
+    const check = element.checks.find((item) => item.check_id === keepCheckId);
+    if (check?.detail) renderCalcDetail(check);
+  }
 }
 
 function findElement(elementId) {
@@ -383,9 +471,74 @@ function saveHandoff(data) {
   );
 }
 
-function canProceed(metrics, elements) {
-  if (!metrics.partition_ok || metrics.parse_error) return false;
-  return elements.every((element) => element.overall_pass);
+function escapeHtml(text) {
+  const el = document.createElement('div');
+  el.textContent = text;
+  return el.innerHTML;
+}
+
+function collectLayoutWarnings(metrics, elements) {
+  const warnings = [];
+  if (metrics.parse_error) {
+    warnings.push(`Input error: ${metrics.parse_error}`);
+  }
+  if (!metrics.parse_error && !metrics.partition_ok) {
+    const delta = Math.abs(metrics.tributary_area_m2 - metrics.panel_area_m2);
+    warnings.push(`Tributary areas do not cover the full panel area (Δ ${delta.toFixed(4)} m²).`);
+  }
+  for (const element of elements) {
+    if (element.overall_pass) continue;
+    const failedChecks = element.checks.filter((check) => !check.passed).map((check) => check.label);
+    if (failedChecks.length > 0) {
+      warnings.push(`${element.name}: ${failedChecks.join('; ')}`);
+    } else {
+      warnings.push(`${element.name}: preliminary ${element.preliminary_status}`);
+    }
+  }
+  return warnings;
+}
+
+function hasLayoutWarnings(metrics, elements) {
+  return collectLayoutWarnings(metrics, elements).length > 0;
+}
+
+function proceedToStructure() {
+  if (layoutData) saveHandoff(layoutData);
+  window.location.href = '/structure';
+}
+
+function openLayoutWarningModal(warnings) {
+  const modal = document.getElementById('layout-warning-modal');
+  document.getElementById('layout-warning-list').innerHTML = warnings
+    .map((warning) => `<li>${escapeHtml(warning)}</li>`)
+    .join('');
+  modal.hidden = false;
+  requestAnimationFrame(() => modal.classList.add('open'));
+  document.getElementById('layout-warning-ok').focus();
+}
+
+function closeLayoutWarningModal() {
+  const modal = document.getElementById('layout-warning-modal');
+  modal.classList.remove('open');
+  modal.hidden = true;
+}
+
+function updateNextButton(metrics, elements) {
+  const btn = document.getElementById('next-btn');
+  if (!btn) return;
+  btn.disabled = !layoutData;
+  btn.classList.toggle('has-warnings', Boolean(metrics && elements && hasLayoutWarnings(metrics, elements)));
+}
+
+function handleNextClick() {
+  if (!layoutData) return;
+  const { metrics, elements } = layoutData;
+  const warnings = collectLayoutWarnings(metrics, elements);
+  if (warnings.length === 0) {
+    proceedToStructure();
+    return;
+  }
+  openLayoutWarningModal(warnings);
 }
 
 async function refreshLayout(reseedAttempt = false) {
@@ -413,7 +566,7 @@ async function refreshLayout(reseedAttempt = false) {
     else clearElementReport();
   }
 
-  document.getElementById('next-btn').disabled = !canProceed(data.metrics, data.elements);
+  updateNextButton(data.metrics, data.elements);
 
   requestAnimationFrame(() => {
     const host = document.getElementById('plotly-chart');
@@ -427,17 +580,48 @@ async function refreshLayout(reseedAttempt = false) {
 }
 
 function bindEvents() {
-  ['col-count-x', 'col-count-y', 'col-overrides', 'obstacles'].forEach((id) => {
+  ['col-count-x', 'col-count-y', 'col-height', 'col-overrides', 'obstacles'].forEach((id) => {
     const el = document.getElementById(id);
     el.addEventListener('input', scheduleRefresh);
     el.addEventListener('change', scheduleRefresh);
   });
 
   document.getElementById('report-close').addEventListener('click', clearElementReport);
+  document.getElementById('calc-close').addEventListener('click', clearCalcDetail);
 
-  document.getElementById('next-btn').addEventListener('click', () => {
-    if (layoutData) saveHandoff(layoutData);
-    showToast('Structure step coming soon');
+  document.getElementById('report-checks').addEventListener('click', (event) => {
+    const row = event.target.closest('.check-row.has-detail');
+    if (!row) return;
+    const element = findElement(selectedElementId);
+    const check = element?.checks?.find((item) => item.check_id === row.dataset.checkId);
+    if (check?.detail) renderCalcDetail(check);
+  });
+
+  document.getElementById('report-checks').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    const row = event.target.closest('.check-row.has-detail');
+    if (!row) return;
+    event.preventDefault();
+    const element = findElement(selectedElementId);
+    const check = element?.checks?.find((item) => item.check_id === row.dataset.checkId);
+    if (check?.detail) renderCalcDetail(check);
+  });
+
+  document.getElementById('next-btn').addEventListener('click', handleNextClick);
+
+  document.getElementById('layout-warning-ok').addEventListener('click', () => {
+    closeLayoutWarningModal();
+    proceedToStructure();
+  });
+
+  document.getElementById('layout-warning-modal').addEventListener('click', (event) => {
+    if (event.target.id === 'layout-warning-modal') closeLayoutWarningModal();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    const modal = document.getElementById('layout-warning-modal');
+    if (!modal?.classList.contains('open')) return;
+    if (event.key === 'Escape') closeLayoutWarningModal();
   });
 
   window.addEventListener('resize', () => {

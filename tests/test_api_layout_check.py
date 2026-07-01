@@ -20,10 +20,11 @@ def test_layout_page():
     assert "layout.js" in res.text
 
 
-def test_structure_redirects_to_layout():
-    res = client.get("/structure", follow_redirects=False)
-    assert res.status_code == 302
-    assert res.headers["location"] == "/layout"
+def test_structure_page():
+    res = client.get("/structure")
+    assert res.status_code == 200
+    assert "Structure" in res.text
+    assert "structure.js" in res.text
 
 
 def test_post_layout_check_default():
@@ -40,6 +41,10 @@ def test_post_layout_check_default():
     assert "data" in body["figure"]
     beam_types = [element for element in body["elements"] if element["element_type"] == "beam"]
     assert len(beam_types) > 0
+    column = next(element for element in body["elements"] if element["element_type"] == "column")
+    assert column["checks"][0]["check_id"] == "factored_axial"
+    assert column["checks"][0]["detail"] is not None
+    assert len(column["checks"][0]["detail"]["steps"]) >= 2
 
 
 def test_layout_check_alias_route():

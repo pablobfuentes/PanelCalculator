@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from api.catalog import default_catalog
@@ -38,8 +38,8 @@ def layout_page() -> FileResponse:
 
 
 @app.get("/structure")
-def structure_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/layout", status_code=302)
+def structure_page() -> FileResponse:
+    return FileResponse(WEB / "structure.html")
 
 
 @app.get("/api/catalog", response_model=list[PanelTypeOut])

@@ -39,6 +39,10 @@
           <div class="struct-hint" id="spacing-y">— m spacing</div>
         </div>
       </div>
+      <div class="struct-field">
+        <label class="struct-label" for="col-height">Column height (m)</label>
+        <input class="struct-input" type="number" id="col-height" min="0.1" step="0.1" value="2.5">
+      </div>
     </div>
 
     <div class="panel-section">
@@ -78,6 +82,7 @@
     </div>
   </main>
 
+  <div class="right-rails" id="right-rails">
   <aside class="side-rail summary-rail" aria-label="Layout summary">
     <div class="section-label">Layout summary</div>
     <div class="side-metrics">
@@ -106,9 +111,23 @@
       <div class="report-loads" id="report-loads"></div>
       <div class="report-checks" id="report-checks"></div>
       <div class="report-overall" id="report-overall"></div>
-      <p class="side-hint">Full analysis with chosen sections in <strong>Structure →</strong></p>
+      <p class="side-hint">Click a check for step-by-step detail. Full analysis in <strong>Structure →</strong></p>
     </div>
   </aside>
+
+  <aside class="side-rail calc-rail" id="calc-rail" aria-label="Calculation detail" hidden>
+    <div class="calc-header">
+      <div class="section-label">Calculation</div>
+      <button type="button" class="report-close" id="calc-close" title="Close calculation">✕</button>
+    </div>
+    <div class="calc-title" id="calc-title">—</div>
+    <div class="calc-verdict" id="calc-verdict">—</div>
+    <div class="calc-section-label">Variables</div>
+    <div class="calc-vars" id="calc-vars"></div>
+    <div class="calc-section-label">Steps</div>
+    <div class="calc-steps" id="calc-steps"></div>
+  </aside>
+  </div>
 </div>
 
 <div class="hud layout-hud" role="toolbar" aria-label="Layout summary">
@@ -137,6 +156,20 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="modal-overlay layout-warning-modal" id="layout-warning-modal" role="dialog" aria-modal="true" aria-labelledby="layout-warning-title" hidden>
+  <div class="modal layout-warning-dialog">
+    <div class="modal-title" id="layout-warning-title">Layout warnings</div>
+    <p class="layout-warning-lead">
+      Some preliminary checks did not pass. You can continue to <strong>Structure</strong> —
+      choosing sections may resolve these issues.
+    </p>
+    <ul class="layout-warning-list" id="layout-warning-list"></ul>
+    <div class="modal-actions layout-warning-actions">
+      <button type="button" class="modal-btn primary" id="layout-warning-ok">OK</button>
+    </div>
+  </div>
+</div>
 
 <script type="module" src="/static/js/layout.js"></script>
 </body>

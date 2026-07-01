@@ -113,18 +113,41 @@ class LayoutCheckRequest(BaseModel):
     snapshot: LayoutSnapshotOut
     column_count_x: int = Field(2, ge=2)
     column_count_y: int = Field(2, ge=2)
+    column_height_m: float = Field(2.5, gt=0)
     column_overrides: str = ""
     obstacle_zones: str = ""
     panels_locked: bool = False
     locked_panel_count: int = Field(0, ge=0)
 
 
+class LayoutCalcVariableOut(BaseModel):
+    name: str
+    symbol: str
+    value: float
+    unit: str
+
+
+class LayoutCalcStepOut(BaseModel):
+    label: str
+    formula: str
+    expression: str
+    result: str
+
+
+class LayoutCheckDetailOut(BaseModel):
+    variables: list[LayoutCalcVariableOut]
+    steps: list[LayoutCalcStepOut]
+    verdict: str
+
+
 class LayoutElementCheckOut(BaseModel):
+    check_id: str
     label: str
     value: float
     limit: float
     unit: str
     passed: bool
+    detail: LayoutCheckDetailOut | None = None
 
 
 class LayoutElementOut(BaseModel):

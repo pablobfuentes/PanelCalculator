@@ -11,7 +11,7 @@ from api.schemas import (
     LayoutSummaryOut,
 )
 from api.tributary import build_tributary_columns
-from core.columns import active_columns, column_spacings, panel_field_bbox
+from core.columns import DEFAULT_COLUMN_SPACING_M, active_columns, column_spacings, panel_field_bbox
 from core.layout_checks import (
     LayoutRules,
     derive_layout_elements,
@@ -41,6 +41,7 @@ def _rules_dict(rules: LayoutRules) -> dict[str, float]:
     return {
         "deflection_limit_denominator": rules.deflection_limit_denominator,
         "max_recommended_beam_span_m": rules.max_recommended_beam_span_m,
+        "default_column_spacing_m": DEFAULT_COLUMN_SPACING_M,
         "live_load_kn_m2": rules.live_load_kn_m2,
         "assumed_column_capacity_kn": rules.assumed_column_capacity_kn,
         "assumed_beam_moment_capacity_knm": rules.assumed_beam_moment_capacity_knm,
